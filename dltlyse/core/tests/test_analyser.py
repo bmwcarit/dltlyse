@@ -23,16 +23,16 @@ class AnalyserTests(TestCase):
         obj = DLTAnalyser()
         obj.load_plugins([])
 
-        self.assertIn("TimeLinePlugin", obj.show_plugins())
-        self.assertIn("HMIReadyPlugin", obj.show_plugins())
+        self.assertIn("ExtractFilesPlugin", obj.show_plugins())
+        self.assertIn("TestSysErrorPlugin", obj.show_plugins())
 
     def test_load_plugins_specific(self):
         """Test specific plugin loading"""
         obj = DLTAnalyser()
-        obj.load_plugins([], plugins=["TimeLinePlugin"])
+        obj.load_plugins([], plugins=["ExtractFilesPlugin"])
 
-        self.assertIn("TimeLinePlugin", obj.show_plugins())
-        self.assertNotIn("HMIReadyPlugin", obj.show_plugins())
+        self.assertIn("ExtractFilesPlugin", obj.show_plugins())
+        self.assertNotIn("TestSysErrorPlugin", obj.show_plugins())
 
     def test_dont_load_manually_executed_plugins(self):  # pylint: disable=invalid-name
         """Test that a manually-executed plugin isn't automatically loaded"""
@@ -44,10 +44,10 @@ class AnalyserTests(TestCase):
     def test_load_plugins_exclude(self):
         """Test blacklisting of plugin loading"""
         obj = DLTAnalyser()
-        obj.load_plugins([], exclude=["TimeLinePlugin"])
+        obj.load_plugins([], exclude=["TestSysErrorPlugin"])
 
-        self.assertNotIn("TimeLinePlugin", obj.show_plugins())
-        self.assertIn("HMIReadyPlugin", obj.show_plugins())
+        self.assertIn("ExtractFilesPlugin", obj.show_plugins())
+        self.assertNotIn("TestSysErrorPlugin", obj.show_plugins())
 
     def test_analyse_file_sanity(self):
         """Simulate test run of the dltlyse with invalid dlt trace files"""
@@ -63,7 +63,7 @@ class AnalyserTests(TestCase):
         file_empty = create_temp_dlt_file(empty=True)
         file_valid = create_temp_dlt_file(stream=dlt_example_stream)
 
-        obj.load_plugins([], plugins=["TimeLinePlugin", "TestSysErrorPlugin"])
+        obj.load_plugins([], plugins=["TestSysErrorPlugin"])
         obj.run_analyse([file_not_exist, file_empty, file_valid], xunit, True, False)
 
         self.assertNotIn(file_valid, obj.file_exceptions)
