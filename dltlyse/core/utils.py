@@ -5,8 +5,8 @@ import atexit
 import logging
 import os
 import tempfile
-import xml.dom.minidom
 from decimal import Decimal
+import xml.dom.minidom
 from xml.etree.ElementTree import Element, SubElement, tostring as xml_element_to_string
 
 logger = logging.getLogger(__name__)

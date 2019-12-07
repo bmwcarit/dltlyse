@@ -7,41 +7,41 @@ xunit_template = (
     '<?xml version="1.0" encoding="UTF-8"?>'
     '<testsuite name="{testsuite_name}" tests="{number_of_tests}" errors="{number_of_errors}" '
     'failures="{number_of_failures}" skip="{number_of_skipped}">'
-    '{testcases}'
-    '</testsuite>'
+    "{testcases}"
+    "</testsuite>"
 )
 
 xunit_tc_template = dict(
     error=(
         '<testcase classname="{classname}" name="{testname}" time="0">'
         '<error type="error" message="{message}"></error>'
-        '<system-out><![CDATA[{stdout}]]></system-out>'
-        '{attach}'
-        '</testcase>'
+        "<system-out><![CDATA[{stdout}]]></system-out>"
+        "{attach}"
+        "</testcase>"
     ),
     failure=(
         '<testcase classname="{classname}" name="{testname}" time="0">'
         '<failure type="failure" message="{message}"></failure>'
-        '<system-out><![CDATA[{stdout}]]></system-out>'
-        '{attach}'
-        '</testcase>'
+        "<system-out><![CDATA[{stdout}]]></system-out>"
+        "{attach}"
+        "</testcase>"
     ),
     skipped=(
         '<testcase classname="{classname}" name="{testname}" time="0">'
         '<skipped type="skip" message="{message}"></skipped>'
-        '<system-out><![CDATA[{stdout}]]></system-out>'
-        '{attach}'
-        '</testcase>'
+        "<system-out><![CDATA[{stdout}]]></system-out>"
+        "{attach}"
+        "</testcase>"
     ),
     success=(
         '<testcase classname="{classname}" name="{testname}" time="0">'
-        '<system-out><![CDATA[{stdout}]]></system-out>'
-        '{attach}'
-        '</testcase>'
+        "<system-out><![CDATA[{stdout}]]></system-out>"
+        "{attach}"
+        "</testcase>"
     ),
 )
 
-attachment_template = ('[[ATTACHMENT|{filename}]]')
+attachment_template = "[[ATTACHMENT|{filename}]]"
 
 
 def xunit_render(result):
@@ -53,6 +53,7 @@ def xunit_render(result):
 
 class Result(object):
     """Class representing a single testcase result"""
+
     def __init__(self, classname="Unknown", testname="Unknown", state="success", stdout="", stderr="", message="",
                  attach=None):
         self.classname = classname
@@ -97,4 +98,4 @@ class XUnitReport(object):
         report = xunit_template.format(**kwargs)
         if self.outfile:
             with open(self.outfile, "w") as reportfile:
-                reportfile.write(report.encode("utf8"))
+                reportfile.write(report)

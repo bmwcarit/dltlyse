@@ -9,8 +9,12 @@ import re
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from six import string_types
+
 from dltlyse.core.report import Result
 from dltlyse.core.utils import round_float
+
+# pylint: disable= unsupported-membership-test
 
 EXTRACT_DIR = "extracted_files"
 logger = logging.getLogger(__name__)
@@ -66,9 +70,7 @@ class Plugin(object):
         except AttributeError:
             testname = ""
         kwargs.setdefault("testname", testname)
-        self.__results.append(Result(
-            **kwargs
-        ))
+        self.__results.append(Result(**kwargs))
 
     def add_attachments(self, attachments):
         """Adds attachments to the last result, creating a result if none exist"""
@@ -118,7 +120,7 @@ class CSVPlugin(Plugin):  # pylint: disable=abstract-method
 
     # If you have only one file you can use these two lines
     csv_filename = None  # If you only have one file, you can use this. Set to "subdir/example.csv" in subclass
-    csv_fields = None    # If using only one file, set this to the list of column headers
+    csv_fields = None  # If using only one file, set this to the list of column headers
 
     # If you want to use multiple CSV files, please use csv_filenames and provide columns per file
     csv_filenames = None
@@ -137,15 +139,13 @@ class CSVPlugin(Plugin):  # pylint: disable=abstract-method
 
     def _create_csvfile(self, filename=None):
         """Create csv file and add first row with column names"""
-        filename = filename or self.csv_filenames.keys()[0]
+        filename = filename or list(self.csv_filenames)[0]
         pathname = os.path.join("extracted_files", filename)
         if not os.path.exists(os.path.dirname(pathname)):
             os.makedirs(os.path.dirname(pathname))
 
         self._csv_fileobj[filename] = open(pathname, "w")
-        self._csv[filename] = csv.writer(
-            self._csv_fileobj[filename],
-        )
+        self._csv[filename] = csv.writer(self._csv_fileobj[filename])
         if self.csv_filenames[filename]:  # Only write header line if columns are defined.
             self._csv[filename].writerow(self.csv_filenames[filename])
         else:
@@ -153,14 +153,14 @@ class CSVPlugin(Plugin):  # pylint: disable=abstract-method
 
     def writerow(self, data_row, filename=None):
         """Write a row to CSV file"""
-        filename = filename or self.csv_filenames.keys()[0]
+        filename = filename or list(self.csv_filenames)[0]
         if filename not in self._csv:
             self._create_csvfile(filename)
         self._csv[filename].writerow(data_row)
 
     def writerows(self, data_rows, filename=None):
         """Write several rows to csv file"""
-        filename = filename or self.csv_filenames.keys()[0]
+        filename = filename or list(self.csv_filenames)[0]
         if filename not in self._csv:
             self._create_csvfile(filename)
         self._csv[filename].writerows(data_rows)
@@ -172,7 +172,7 @@ class CSVPlugin(Plugin):  # pylint: disable=abstract-method
 
     def _close_csv_file(self, filename=None):
         """Close CSV file"""
-        filename = filename or self.csv_filenames.keys()[0]
+        filename = filename or list(self.csv_filenames)[0]
         if self._csv[filename]:
             self._csv_fileobj[filename].close()
 
@@ -222,8 +222,9 @@ def dlt_callback(app_id=None, ctx_id=None):
         app_id(str): if defined, is the app_id that we want to catch.
         ctx_id(str): if defined, is the ctx_id that we want to catch.
     """
+
     def wrapper(func):  # pylint: disable=missing-docstring
-        func.filter_condition = app_id or '', ctx_id or ''
+        func.filter_condition = app_id or "", ctx_id or ""
 
         return func
 
@@ -255,6 +256,7 @@ class CallBacksAndReportPlugin(Plugin):  # pylint: disable=abstract-method
     Finally, it automatically sets the log level to DEBUG, and creates a logger using the class
     name. The logger is available as the logger member.
     """
+
     def __init__(self):
         """Automatically sets a default for report (None -> no report) and logger."""
         self.collect_and_register_callbacks()
@@ -274,14 +276,14 @@ class CallBacksAndReportPlugin(Plugin):  # pylint: disable=abstract-method
         self.dlt_greedy_callbacks = []
         for member_name in dir(self):  # Scans the class members.
             member = getattr(self, member_name)
-            filter_condition = getattr(member, 'filter_condition', None)
+            filter_condition = getattr(member, "filter_condition", None)
             if filter_condition:
                 if filter_condition[0] or filter_condition[1]:
-                    if self.message_filters != 'all':
+                    if self.message_filters != "all":
                         self.message_filters.append(filter_condition)  # pylint: disable=no-member
                     self.dlt_callbacks[filter_condition].append(member)
                 else:
-                    self.message_filters = 'all'
+                    self.message_filters = "all"
                     self.dlt_greedy_callbacks.append(member)
 
     # pylint: disable=invalid-name
@@ -298,17 +300,17 @@ class CallBacksAndReportPlugin(Plugin):  # pylint: disable=abstract-method
         """
         # Data should be converted to strings, since dltlyse fails to register a filter if it's using unicode strings.
         app_id, ctx_id, userdata = (str(app_id), str(ctx_id),
-                                    str(userdata) if isinstance(userdata, basestring) else userdata)
+                                    str(userdata) if isinstance(userdata, string_types) else userdata)
 
         callback = functools.partial(template_function, app_id=app_id, ctx_id=ctx_id, userdata=userdata)
         callback = dlt_callback(app_id, ctx_id)(callback)
         filter_condition = app_id, ctx_id
         if filter_condition[0] or filter_condition[1]:
-            if self.message_filters != 'all':
+            if self.message_filters != "all":
                 self.message_filters.append(filter_condition)  # pylint: disable=no-member
             self.dlt_callbacks[filter_condition].append(callback)
         else:
-            self.message_filters = 'all'
+            self.message_filters = "all"
             self.dlt_greedy_callbacks.append(callback)
 
     def get_result_dir(self):
@@ -321,9 +323,9 @@ class CallBacksAndReportPlugin(Plugin):  # pylint: disable=abstract-method
     def report_filename(self):
         """Builds & returns a standard/base filename for the report."""
         # Converts all uppercase letters in lowercase, pre-pending them with a '_'.
-        report_filename = re.sub(r'([A-Z])', r'_\1', self.get_plugin_name())
+        report_filename = re.sub(r"([A-Z])", r"_\1", self.get_plugin_name())
 
-        return report_filename.lower().strip('_') + '.txt'
+        return report_filename.lower().strip("_") + ".txt"
 
     def prepare_report(self):
         """It's invoked just before writing the report to file, in case that some operation needs
@@ -341,9 +343,8 @@ class CallBacksAndReportPlugin(Plugin):  # pylint: disable=abstract-method
         """
         self.prepare_report()
         if self.report_output is None:
-            return 'No report is generated!'
-        else:
-            return self.write_to_domain_file(self.report_filename(), str(self.report_output))
+            return "No report is generated!"
+        return self.write_to_domain_file(self.report_filename(), str(self.report_output))
 
     def write_to_domain_file(self, filename, report):
         """Write the given report to a file.
@@ -353,7 +354,7 @@ class CallBacksAndReportPlugin(Plugin):  # pylint: disable=abstract-method
             report(str): the string with the report to be saved.
         """
         fullpath = os.path.join(self.get_result_dir(), filename)
-        with open(fullpath, 'wb') as report_file:
+        with open(fullpath, "w") as report_file:
             report_file.write(report)
         self.logger.info("See %s", fullpath)
 

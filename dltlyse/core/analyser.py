@@ -9,14 +9,16 @@ import traceback
 import os.path
 import signal
 import sys
-
 from contextlib import contextmanager
+import six
+
+from dlt import dlt
 
 from dltlyse.core.report import XUnitReport, Result
 from dltlyse.core.plugin_base import Plugin
 
-from dlt import dlt
 
+# pylint: disable= too-many-nested-blocks, no-member
 
 logger = logging.getLogger(__name__)
 stdoutlogger = logging.getLogger("summary")
@@ -25,19 +27,20 @@ stdoutlogger.addHandler(logging.StreamHandler(sys.stdout))
 DEFAULT_PLUGINS_DIRS = [
     os.path.join(os.path.dirname(__file__), "../plugins"),  # installation folder
     # e.g. /usr/bin/pythonX.X/site-packages/dltlyse/plugins
-    os.path.join(os.getcwd(), "plugins")  # plugins folder in current working directory
+    os.path.join(os.getcwd(), "plugins"),  # plugins folder in current working directory
 ]
 
 # Traces to buffer since they might be stored before lifecycle start message
-buffer_matches = [{"apid": b"DA1", "ctid": b"DC1",
-                   "payload_decoded": b"[connection_info ok] connected \x00\x00\x00\x00"},
-                  {"ecuid": "XORA"}]
+buffer_matches = [
+    {"apid": "DA1", "ctid": "DC1", "payload_decoded": "[connection_info ok] connected \00\00\00\00"},
+    {"ecuid": "XORA"},
+]
 MAX_BUFFER_SIZE = 50
 
 DLT_LIFECYCLE_START = {
-    "apid": b"DLTD",
-    "ctid": b"INTM",
-    "payload_decoded": b"Daemon launched. Starting to output traces...",
+    "apid": "DLTD",
+    "ctid": "INTM",
+    "payload_decoded": "Daemon launched. Starting to output traces...",
 }
 
 
@@ -130,7 +133,7 @@ def _scan_folder(root, plugin_classes):
         return
 
     filenames = os.listdir(root)
-    if '__NO_PLUGINS__' in filenames:  # If the folder hasn't plugins, we skip it.
+    if "__NO_PLUGINS__" in filenames:  # If the folder hasn't plugins, we skip it.
         return
 
     sys.path.insert(0, root)
@@ -148,8 +151,14 @@ def _scan_folder(root, plugin_classes):
                 module = sys.modules[module_name]
                 for class_name in dir(module):
                     cls = getattr(module, class_name)
-                    if hasattr(cls, "__mro__") and issubclass(cls, Plugin) and not cls.__abstractmethods__:
-                        plugin_classes.append(cls)
+                    if six.PY3:
+                        if (hasattr(cls, "__mro__") and issubclass(cls, Plugin) and
+                                (not any(hasattr(getattr(cls, item), "__isabstractmethod__") and
+                                         not isinstance(getattr(cls, item), property) for item in dir(cls)))):
+                            plugin_classes.append(cls)
+                    else:
+                        if hasattr(cls, "__mro__") and issubclass(cls, Plugin) and not cls.__abstractmethods__:
+                            plugin_classes.append(cls)
             except (ImportError, ValueError):
                 logger.error("Could not load plugin %s\n%s", module_name, traceback.format_exc())
 
@@ -168,6 +177,7 @@ def get_plugin_classes(plugin_dirs):  # pylint: disable=too-many-locals
 
 class DLTAnalyser(object):
     """DLT Analyser"""
+
     def __init__(self):
         self.plugins = []
         self.file_exceptions = {}
@@ -192,7 +202,7 @@ class DLTAnalyser(object):
         for cls in plugin_classes:
             if plugins is None:
                 if cls.manually_executed and \
-                        os.environ.get("DLTLYSE_ALL_INCLUDES_MANUAL", "false").lower() not in ('1', 'true', 'yes'):
+                        os.environ.get("DLTLYSE_ALL_INCLUDES_MANUAL", "false").lower() not in ('1', 'true', 'yes',):
                     continue
             else:
                 if not cls.get_plugin_name() in plugins:
@@ -245,9 +255,9 @@ class DLTAnalyser(object):
         """Pass on the message to plugins that need it"""
         for plugin in self.plugins:
             if plugin.message_filters == "all" or \
-                   (message.apid, message.ctid) in plugin.message_filters or \
-                   ("", message.ctid) in plugin.message_filters or \
-                   (message.apid, "") in plugin.message_filters:
+                (message.apid, message.ctid) in plugin.message_filters or \
+                ("", message.ctid) in plugin.message_filters or \
+                    (message.apid, "") in plugin.message_filters:
                 with handle_plugin_exceptions(plugin, "calling"):
                     plugin(message)
 
@@ -267,7 +277,7 @@ class DLTAnalyser(object):
         filters = self.get_filters()
         # add filter for lifecycle start message in case it is missing
         # filters == None means no filtering is done at all
-        flt = (DLT_LIFECYCLE_START["apid"], DLT_LIFECYCLE_START["ctid"])
+        flt = (DLT_LIFECYCLE_START["apid"].encode("utf-8"), DLT_LIFECYCLE_START["ctid"].encode("utf-8"))
         if filters and flt not in filters:
             filters.append(flt)
 
@@ -362,23 +372,23 @@ class DLTAnalyser(object):
             output = "Report for file"
             if filename in self.file_exceptions:
                 stdoutlogger.debug(self.file_exceptions[filename])
-                stdoutlogger.info(output + " %s ... = failed", filename)
+                stdoutlogger.info("%s %s ... = failed", output, filename)
                 file_results.append(Result(
                     classname="DLTAnalyser",
                     testname="File Sanity Checks During Execution",
                     state="error",
                     stdout=self.file_exceptions[filename],
                     message=self.file_exceptions[filename]
-                    ))
+                ))
             else:
-                stdoutlogger.info(output + " %s ... = passed", filename)
+                stdoutlogger.info("%s %s ... = passed", output, filename)
                 file_results.append(Result(
                     classname="DLTAnalyser",
                     testname="File Sanity Checks During Execution",
                     state="success",
                     stdout="File Parsed Successfully",
                     message="File Parsed Successfully"
-                    ))
+                ))
 
         xreport.add_results(file_results)
 

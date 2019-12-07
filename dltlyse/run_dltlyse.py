@@ -16,6 +16,8 @@ import sys
 
 from dltlyse.core.analyser import DLTAnalyser
 
+# pylint: disable=dangerous-default-value
+
 logger = logging.getLogger("dltlyse")
 
 
@@ -48,7 +50,7 @@ def parse_options(args=sys.argv[1:]):
     )
 
     # convert string to list
-    if isinstance(defaults["plugins"], unicode):
+    if isinstance(defaults["plugins"], str):
         defaults["plugins"] = defaults["plugins"].split(',')
     parser.set_defaults(**defaults)
 
@@ -100,22 +102,22 @@ def main():
     if options.show_plugins:
         print(analyser.show_plugins(), file=sys.stderr)
         return 0
-    else:
-        traces = []
-        for trace in options.traces:
-            if os.path.isdir(trace):
-                if options.recursive_search is True:
-                    for root, _, filenames in os.walk(trace):
-                        for filename in fnmatch.filter(filenames, "*.dlt"):
-                            traces.append(os.path.join(root, filename))
-                else:
-                    for filename in fnmatch.filter(os.listdir(trace), "*.dlt"):
-                        traces.append(os.path.join(trace, filename))
-            else:
-                traces.append(trace)
 
-        return analyser.run_analyse(traces, xunit=options.xunit, no_sort=True,
-                                    is_live=options.live_run, testsuite_name=options.xunit_testsuite_name)
+    traces = []
+    for trace in options.traces:
+        if os.path.isdir(trace):
+            if options.recursive_search is True:
+                for root, _, filenames in os.walk(trace):
+                    for filename in fnmatch.filter(filenames, "*.dlt"):
+                        traces.append(os.path.join(root, filename))
+            else:
+                for filename in fnmatch.filter(os.listdir(trace), "*.dlt"):
+                    traces.append(os.path.join(trace, filename))
+        else:
+            traces.append(trace)
+
+    return analyser.run_analyse(traces, xunit=options.xunit, no_sort=True,
+                                is_live=options.live_run, testsuite_name=options.xunit_testsuite_name)
 
 
 if __name__ == "__main__":

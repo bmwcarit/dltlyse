@@ -11,6 +11,7 @@ from __future__ import print_function
 import logging
 import os
 
+from collections import OrderedDict
 from dltlyse.core.plugin_base import Plugin, EXTRACT_DIR
 
 COREDUMP_DIR = "Coredumps"
@@ -62,7 +63,7 @@ class File(object):
 class ExtractFilesPlugin(Plugin):
     """Extracting all files from DLT trace"""
 
-    message_filters = [("SYS", "FILE")]
+    message_filters = [("SYS", "FILE"), ("FLT", "FILE")]
 
     extracted_files = {}
     success = False
@@ -70,7 +71,7 @@ class ExtractFilesPlugin(Plugin):
     counter = 0
 
     def __call__(self, message):
-        if message.apid == "SYS" and message.ctid == "FILE":
+        if message.apid in ["SYS", "FLT"] and message.ctid == "FILE":
             # file transfer payload header
             #  FLST - file trasfer start - first DLT message from the file transfer
             #          ["FLST", transfer_id, filename, length, date, "FLST"]
@@ -78,10 +79,10 @@ class ExtractFilesPlugin(Plugin):
             #          ["FLDA", transfer_id, index, data, "FLDA"]
             #  FLFI - file transfer end
             #          ["FLFI", transfer_id, "FLFI"]
-            payload_header = message.payload[0]
+            payload_header = message.payload[0].decode('utf8')
             transfer_id = str(message.payload[1])  # used as a dictionary key
             if payload_header == "FLST":
-                filename = message.payload[2]
+                filename = message.payload[2].decode('utf8')
                 filename = os.path.basename(filename)  # ignore whatever path is included in DLT
                 logger.info("Found file '%s' in the trace", filename)
                 extr_file = File(transfer_id=transfer_id, filename=filename)
@@ -103,13 +104,14 @@ class ExtractFilesPlugin(Plugin):
     def report(self):
         bad_files = []
         text = "extracted files found:\n"
+        sorted_extracted_files = OrderedDict(sorted(self.extracted_files.items()))
         successful_attachments = [
             os.path.join(COREDUMP_DIR, x.filename)
-            for x in sorted(self.extracted_files.values())
+            for x in sorted_extracted_files.values()
             if not x.error and x.finished
         ]
 
-        for extr_file in sorted(self.extracted_files.values()):
+        for extr_file in sorted_extracted_files.values():
             text += " - {}".format(extr_file.filename)
             if extr_file.error:
                 bad_files.append(extr_file.filename)
