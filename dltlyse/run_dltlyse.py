@@ -106,13 +106,15 @@ def main():
     traces = []
     for trace in options.traces:
         if os.path.isdir(trace):
+            dir_traces = []
             if options.recursive_search is True:
                 for root, _, filenames in os.walk(trace):
                     for filename in fnmatch.filter(filenames, "*.dlt"):
-                        traces.append(os.path.join(root, filename))
+                        dir_traces.append(os.path.join(root, filename))
             else:
                 for filename in fnmatch.filter(os.listdir(trace), "*.dlt"):
-                    traces.append(os.path.join(trace, filename))
+                    dir_traces.append(os.path.join(trace, filename))
+            traces.extend(sorted(dir_traces))
         else:
             traces.append(trace)
 
