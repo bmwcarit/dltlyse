@@ -1,4 +1,3 @@
-# Copyright (C) 2017, BMW Car IT GmbH. All rights reserved.
 """Tests for data_to_xml_string plugin for dltlyse."""
 from unittest import TestCase
 

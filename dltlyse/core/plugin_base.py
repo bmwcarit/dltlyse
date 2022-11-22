@@ -1,8 +1,9 @@
-# Copyright (C) 2016-2018. BMW Car IT GmbH. All rights reserved.
 """Base class for dltlyse plugins"""
 
+import copy
 import csv
 import functools
+import inspect
 import logging
 import os
 import re
@@ -20,8 +21,49 @@ EXTRACT_DIR = "extracted_files"
 logger = logging.getLogger(__name__)
 
 
+def plugin_metadata(**kwargs):
+    """Plugin metadata decorator for Plugin class
+
+    You can add metadata information in your Plugin class. For example,
+
+        @plugin_metadata(type="test", function="monitor")
+        class TestMetadataPlugin(Plugin):
+            pass
+
+    The metadata is stored in cls.plugin_metadata
+
+        >>> print(TestMetadataPlugin.plugin_metadata)
+        {'type': 'test', 'function': 'monitor'}
+
+    If the class is derived from another Plugin with metadata, the class also has the metadata of parent class. If the
+    parent and derived class have the same key, the value will be from derived class. For example,
+
+        @plugin_metadata(function="logging", extra="extra")
+        class TestMetadataLoggingPlugin(Plugin):
+            pass
+
+        >>> print(TestMetadataPlugin.plugin_metadata)
+        {"type": "test", "function": "logging", "extra": "extra"}
+
+    You can get the complete example from dltlyse/core/tests/test_plugin_report.py
+
+    The current usage is that the dltlyse xunit report will show metadata for each plugin.
+    """
+    def _metadata(cls):  # pylint: disable=missing-docstring
+        metadata_key = "plugin_metadata"
+        metadata = copy.deepcopy(getattr(cls, metadata_key, {}))
+        metadata.update(kwargs)
+
+        setattr(cls, metadata_key, metadata)
+
+        return cls
+
+    return _metadata
+
+
 class Plugin(object):
     """dltlyse Plugin base class"""
+
     __metaclass__ = ABCMeta
 
     # message filters are filters that will be used during loading DLT trace file. Each plugin defines
@@ -63,13 +105,27 @@ class Plugin(object):
         pass
 
     def add_result(self, **kwargs):
-        """Adds a Result object with set values"""
+        """Adds a Result object with set values
+
+        :param str state: possible values "success", "error", "failures", "skipped"
+        :param str message: log for the result
+        :param str stdout: stdout
+        :param str stderr: stderr
+        """
+        # Parse class name
         kwargs.setdefault("classname", self.get_plugin_name())
-        try:
-            testname = self.__doc__.splitlines()[0]
-        except AttributeError:
-            testname = ""
-        kwargs.setdefault("testname", testname)
+
+        # Parse class docstring
+        plugin_docstring = inspect.getdoc(self)
+
+        # Parse plugin short description
+        kwargs.setdefault("testname", plugin_docstring.splitlines()[0] if plugin_docstring else "")
+
+        # Parse plugin metadata and add plugin docstring
+        metadata = copy.deepcopy(getattr(self, "plugin_metadata", {}))
+        metadata["docstring"] = plugin_docstring or ""
+        kwargs.setdefault("metadata", metadata)
+
         self.__results.append(Result(**kwargs))
 
     def add_attachments(self, attachments):
@@ -90,8 +146,11 @@ class Plugin(object):
 
     def report_exceptions(self):
         """Report all detected exceptions"""
-        logger.debug("Timings of plugin %s: %s",
-                     self.get_plugin_name(), {k: str(round_float(v, 2)) for k, v in self.__timings.items()})
+        logger.debug(
+            "Timings of plugin %s: %s",
+            self.get_plugin_name(),
+            {k: str(round_float(v, 2)) for k, v in self.__timings.items()},
+        )
         if self.__exceptions:
             self.add_result(
                 testname="Exceptions during execution",
@@ -140,7 +199,7 @@ class CSVPlugin(Plugin):  # pylint: disable=abstract-method
     def _create_csvfile(self, filename=None):
         """Create csv file and add first row with column names"""
         filename = filename or list(self.csv_filenames)[0]
-        pathname = os.path.join("extracted_files", filename)
+        pathname = os.path.join(EXTRACT_DIR, filename)
         if not os.path.exists(os.path.dirname(pathname)):
             os.makedirs(os.path.dirname(pathname))
 
@@ -299,8 +358,11 @@ class CallBacksAndReportPlugin(Plugin):  # pylint: disable=abstract-method
             reality it can be anything, since it's up to the template function to use this parameter as it wants.
         """
         # Data should be converted to strings, since dltlyse fails to register a filter if it's using unicode strings.
-        app_id, ctx_id, userdata = (str(app_id), str(ctx_id),
-                                    str(userdata) if isinstance(userdata, string_types) else userdata)
+        app_id, ctx_id, userdata = (
+            str(app_id),
+            str(ctx_id),
+            str(userdata) if isinstance(userdata, string_types) else userdata,
+        )
 
         callback = functools.partial(template_function, app_id=app_id, ctx_id=ctx_id, userdata=userdata)
         callback = dlt_callback(app_id, ctx_id)(callback)

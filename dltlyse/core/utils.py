@@ -1,4 +1,3 @@
-# Copyright (C) 2016. BMW Car IT GmbH. All rights reserved.
 """Helper functions"""
 
 import atexit

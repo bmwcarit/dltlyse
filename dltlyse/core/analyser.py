@@ -1,22 +1,22 @@
-# Copyright (C) 2016. BMW Car IT GmbH. All rights reserved.
 """DLT file analyser"""
 
 from __future__ import print_function
 
+from contextlib import contextmanager
+from collections import defaultdict
+import itertools
 import logging
-import time
-import traceback
-import os.path
+import os
 import signal
 import sys
-from contextlib import contextmanager
-import six
+import time
+import traceback
 
+import six
 from dlt import dlt
 
 from dltlyse.core.report import XUnitReport, Result
 from dltlyse.core.plugin_base import Plugin
-
 
 # pylint: disable= too-many-nested-blocks, no-member
 
@@ -31,17 +31,18 @@ DEFAULT_PLUGINS_DIRS = [
 ]
 
 # Traces to buffer since they might be stored before lifecycle start message
-buffer_matches = [
-    {"apid": "DA1", "ctid": "DC1", "payload_decoded": "[connection_info ok] connected \00\00\00\00"},
-    {"ecuid": "XORA"},
-]
-MAX_BUFFER_SIZE = 50
-
+BUFFER_MATCHES_MSG = {
+    "apid": "DA1",
+    "ctid":"DC1",
+    "payload_decoded":"[connection_info ok] connected \00\00\00\00"
+}
+BUFFER_MATCHES_ECUID = "XORA"
 DLT_LIFECYCLE_START = {
     "apid": "DLTD",
     "ctid": "INTM",
     "payload_decoded": "Daemon launched. Starting to output traces...",
 }
+MAX_BUFFER_SIZE = 50
 
 
 class DLTLifecycle(object):
@@ -105,6 +106,15 @@ class DLTLifecycle(object):
         return self._last_msg
 
 
+def make_plugin_exception_message(plugin, action, traceback_format_exc, sys_exec_info):
+    """Handle plugin exception"""
+    message = "Error {} plugin {} - {}".format(action, plugin.get_plugin_name(), sys_exec_info[0])
+    logger.error(message)
+    logger.error(traceback_format_exc)
+    if not isinstance(plugin, type):
+        plugin.add_exception('\n'.join([message, traceback_format_exc]))
+
+
 @contextmanager
 def handle_plugin_exceptions(plugin, action="running"):
     """Catch all exceptions and store them in the plugin.__exceptions structure"""
@@ -112,11 +122,8 @@ def handle_plugin_exceptions(plugin, action="running"):
     try:
         yield
     except:  # pylint: disable=bare-except
-        message = "Error {} plugin {} - {}".format(action, plugin.get_plugin_name(), sys.exc_info()[0])
-        logger.error(message)
-        logger.error(traceback.format_exc())
-        if not isinstance(plugin, type):
-            plugin.add_exception('\n'.join([message, traceback.format_exc()]))
+        make_plugin_exception_message(plugin, action, traceback.format_exc(), sys.exc_info())
+
     if not isinstance(plugin, type):
         plugin.add_timing(action, time.time() - start_time)
 
@@ -175,8 +182,128 @@ def get_plugin_classes(plugin_dirs):  # pylint: disable=too-many-locals
     return plugin_classes
 
 
+class DltlysePluginCollector(object):
+    """Dispatch the dlt messages to each plugins
+
+    The class collects all plugins by plugin's message filter setting. The
+    analyser could pass messages to these plugins with fewer comparisons than
+    before.
+
+    Based on the performance consideration, these plugins are saved as a tuple.
+    Since these data strcutre will be searched over million of times, choosing
+    a low overhead data structure is necessary.
+    """
+
+    def __init__(self):  # type: () -> None
+        self.msg_plugins = {}  # type: Dict[Tuple[str, str], Tuple[Plugin, ...]]
+        self.apid_plugins = {}  # type: Dict[str, Tuple[Plugin, ...]]
+        self.ctid_plugins = {}  #  type: Dict[str, Tuple[Plugin, ...]]
+        self.greedy_plugins = () # type: Tuple[Plugin, ...]
+
+    def _convert_dict_value_tuple(self, plugins): # type: (Dict[_T, List[Plugin]]) -> Dict[_T, Tuple[Plugin, ...]]
+        """Helper function to convert the list value type to tuple value type"""
+        return {key: tuple(value) for key, value in plugins.items() if value}
+
+    def _dispatch_plugins(self, plugins):  # type: (Iterable[Plugin]) -> None
+        """Dispatch plugins by message filters"""
+        msg_plugins = defaultdict(list) # type: DefaultDict[Tuple[str, str], List[Plugin]]
+        apid_plugins = defaultdict(list)  # type: DefaultDict[str, List[Plugin]]
+        ctid_plugins = defaultdict(list)  # type: DefaultDict[str, List[Plugin]]
+        greedy_plugins = []  # type: List[Plugin]
+
+        for plugin in plugins:
+            msg_filters = plugin.message_filters
+            if isinstance(msg_filters, str) and msg_filters == "all":
+                greedy_plugins.append(plugin)
+            elif isinstance(msg_filters, list):
+                msg_filters = frozenset(msg_filters)  # type: ignore
+                for apid, ctid in msg_filters:
+                    if apid and ctid:
+                        msg_plugins[apid, ctid].append(plugin)
+                    elif apid:
+                        apid_plugins[apid].append(plugin)
+                    elif ctid:
+                        ctid_plugins[ctid].append(plugin)
+
+        self.msg_plugins = self._convert_dict_value_tuple(msg_plugins)
+        self.apid_plugins = self._convert_dict_value_tuple(apid_plugins)
+        self.ctid_plugins = self._convert_dict_value_tuple(ctid_plugins)
+        self.greedy_plugins = tuple(greedy_plugins)
+
+    def _check_plugin_msg_filters(self, plugins):  # type: (Iterable[Plugin]) -> None
+        """Check the plugin's message filter setting
+
+        Check if the message filters is valid. If there is any duplicated setting,
+        it will cause the plugin to process the same message many times.
+
+        :raises ValueError: When the settings of the plugin's message filter
+                            is invalid.
+        """
+        for plugin in plugins:
+            error_msg_postfix = "{plugin} - {msg_filters}".format(
+                plugin=plugin.get_plugin_name(), msg_filters=plugin.message_filters
+            )
+
+            msg_filters = plugin.message_filters
+            if isinstance(msg_filters, str):
+                if msg_filters != "all":
+                    raise ValueError("Invalid message filter setting: " + error_msg_postfix)
+                continue
+
+            if not msg_filters:
+                raise ValueError("Message filter should not empty: " + error_msg_postfix)
+
+            msg_filters = frozenset(plugin.message_filters)  # type: ignore
+            apid_filters = {apid for apid, ctid in msg_filters if apid and not ctid}
+            ctid_filters = {ctid for apid, ctid in msg_filters if not apid and ctid}
+
+            if any(apid in apid_filters or ctid in ctid_filters for apid, ctid in msg_filters if apid and ctid):
+                raise ValueError("Duplicated message filter setting: " + error_msg_postfix)
+
+    def _convert_plugin_obj_to_name(self, plugins): # (Union[Tuple[Plugin, ...], Dict[_T, Tuple[Plugin, ...]]]) ->
+                                                    #   Union[List[str], Dict[_t, List[str]]]
+        """Helper functioon to convert the plugin object to its name from a dict or a tuple
+
+        The method is only used for debugging purpose.
+        """
+        if isinstance(plugins, tuple):
+            return [plugin.get_plugin_name() for plugin in plugins]
+
+        return {key: [plugin.get_plugin_name() for plugin in value] for key, value in plugins.items()}
+
+    def _print_plugin_collections(self): # type: () -> None
+        """Print the collections for all plugins
+
+        The method is only used for debugging purpose.
+        """
+        logger.debug("Message filter plugins: %s", self._convert_plugin_obj_to_name(self.msg_plugins))
+        logger.debug("APID plugins: %s", self._convert_plugin_obj_to_name(self.apid_plugins))
+        logger.debug("CTID plugins: %s", self._convert_plugin_obj_to_name(self.ctid_plugins))
+        logger.debug("Greedy plugins: %s", self._convert_plugin_obj_to_name(self.greedy_plugins))
+
+    def init_plugins(self, plugins):  # type: (List[Plugin]) -> None
+        """Init with plugins
+
+        Please call the function after all plugins are initialized, the method
+        parses the plugin's message filter then creates the
+        corresponding plugin lists for message dispatching.
+        """
+        self._check_plugin_msg_filters(plugins)
+        self._dispatch_plugins(plugins)
+        self._print_plugin_collections()
+
+
 class DLTAnalyser(object):
-    """DLT Analyser"""
+    """Main program to run live/offline analysis
+
+    The analyser receives/get dlt messages. If the message is a lifecycle-start message,
+    the analyser will end last life cycle, start a new lifecycle and pass the
+    information to plugins which are implemented with `new_lifecycle` and `end_lifecycle`.
+    If the message is a normal message. The message will be passed to registered plugins.
+
+    The class is not a plugin. If there is an uncaught exception happened in
+    execution time, the File Sanity Check will fail.
+    """
 
     def __init__(self):
         self.plugins = []
@@ -184,13 +311,14 @@ class DLTAnalyser(object):
         self.traces = []
         self._buffered_traces = []
         self.dlt_file = None
+        self.plugin_collector = DltlysePluginCollector()
 
     def process_buffer(self):
         """Return buffered traces and clear buffer"""
-        if self._buffered_traces:
-            for trace in self._buffered_traces:
-                self.process_message(trace)
-            self._buffered_traces = []
+        for trace in self._buffered_traces:
+            self.process_message(trace)
+
+        self._buffered_traces = []
 
     def load_plugins(self, plugin_dirs, plugins=None, exclude=None, no_default_dir=False):
         """Load plugins from "plugins" directory"""
@@ -217,6 +345,8 @@ class DLTAnalyser(object):
             logger.error("Some plugins that were requested were not found: %s", plugins)
             raise RuntimeError("Error loading requested plugins: {}".format(", ".join(plugins)))
 
+        self.plugin_collector.init_plugins(self.plugins)
+
     def show_plugins(self):
         """Show available plugins"""
         text = "Available plugins:\n"
@@ -232,34 +362,22 @@ class DLTAnalyser(object):
 
     def get_filters(self):
         """Extract filtering information from plugins"""
-        filters = []
+        filters = set()
         for plugin in self.plugins:
             if plugin.message_filters == "all":
                 logger.debug("Speed optimization disabled: '%s' plugin requires all messages",
                              plugin.get_plugin_name())
-                filters = None
-                break
+                return None
             for flt in plugin.message_filters:
-                if flt not in filters:
-                    filters.append(flt)
+                filters.add(flt)
 
-        return filters
+        return list(filters)
 
     def start_lifecycle(self, ecu_id, lifecycle_id):
         """call DltAtlas plugin API - new_lifecycle"""
         for plugin in self.plugins:
             with handle_plugin_exceptions(plugin, "calling new_lifecycle"):
                 plugin.new_lifecycle(ecu_id, lifecycle_id)
-
-    def process_message(self, message):
-        """Pass on the message to plugins that need it"""
-        for plugin in self.plugins:
-            if plugin.message_filters == "all" or \
-                (message.apid, message.ctid) in plugin.message_filters or \
-                ("", message.ctid) in plugin.message_filters or \
-                    (message.apid, "") in plugin.message_filters:
-                with handle_plugin_exceptions(plugin, "calling"):
-                    plugin(message)
 
     def end_lifecycle(self, lifecycle, lifecycle_id):
         """Finish lifecycle processing for all plugins"""
@@ -271,9 +389,34 @@ class DLTAnalyser(object):
             with handle_plugin_exceptions(plugin, "calling end_lifecycle"):
                 plugin.end_lifecycle(lifecycle.ecu_id, lifecycle_id)
 
+    def process_message(self, msg):
+        """Process the message"""
+        msg_apid = msg.apid
+        msg_ctid = msg.ctid
+
+        for plugin in itertools.chain(
+                self.plugin_collector.msg_plugins.get((msg_apid, msg_ctid), ()),
+                self.plugin_collector.apid_plugins.get(msg_apid, ()),
+                self.plugin_collector.ctid_plugins.get(msg_ctid, ()),
+                self.plugin_collector.greedy_plugins,
+        ):
+            try:
+                plugin(msg)
+            except:  # pylint: disable=bare-except
+                make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
+
     # pylint: disable=too-many-locals, too-many-statements
     def run_analyse(self, traces, xunit, no_sort, is_live, testsuite_name="dltlyse"):
         """Read the DLT trace and call each plugin for each message read"""
+        #
+        # CAUTION: DON'T REFACTOR THE METHOD FOR READABILITY.
+        #
+        # The method is optimized for performance. We do a lot of optimizations
+        # for the method (e.g. avoid to access attribute with dots, function
+        # inlining, loop unrolling, ...).  The inner most loop is called over
+        # 10 million times when the input file is large. Any small/tiny change
+        # could causes performance pentlty.
+
         filters = self.get_filters()
         # add filter for lifecycle start message in case it is missing
         # filters == None means no filtering is done at all
@@ -290,6 +433,22 @@ class DLTAnalyser(object):
         if is_live:
             signal.signal(signal.SIGINT, self.stop_signal_handler)
 
+        # Optimization: Local variables for global constant values
+        # https://wiki.python.org/moin/PythonSpeed/PerformanceTips#Local_Variables
+        buffer_matches_msg_apid = BUFFER_MATCHES_MSG["apid"]
+        buffer_matches_msg_ctid = BUFFER_MATCHES_MSG["ctid"]
+        buffer_matches_msg_payload_decoded = BUFFER_MATCHES_MSG["payload_decoded"]  # pylint: disable=invalid-name
+        dlt_lifecycle_start_apid = DLT_LIFECYCLE_START["apid"]
+        dlt_lifecycle_start_ctid = DLT_LIFECYCLE_START["ctid"]
+        dlt_lifecycle_start_payload_decoded = DLT_LIFECYCLE_START["payload_decoded"]  # pylint: disable=invalid-name
+
+        # Optimization: Local variables for the get functions
+        # ref: https://wiki.python.org/moin/PythonSpeed/PerformanceTips#Avoiding_dots...
+        msg_plugins_getter = self.plugin_collector.msg_plugins.get
+        apid_plugins_getter = self.plugin_collector.apid_plugins.get
+        ctid_plugins_getter = self.plugin_collector.ctid_plugins.get
+        greedy_plugins = self.plugin_collector.greedy_plugins
+
         for filename in traces:
             logger.info("Reading trace file '%s'", filename)
             with self.handle_file_exceptions(filename):
@@ -297,20 +456,39 @@ class DLTAnalyser(object):
                 self.dlt_file = tracefile
                 msg = None
                 for msg in tracefile:
-                    is_start_msg = msg.compare(DLT_LIFECYCLE_START)
-                    bufferable_msg = any(msg.compare(trace) for trace in buffer_matches)
+                    # Optimization: Local variables for values
+                    # https://wiki.python.org/moin/PythonSpeed/PerformanceTips#Local_Variables
+                    msg_apid = msg.apid
+                    msg_ctid = msg.ctid
+                    msg_payload_decoded = msg.payload_decoded
 
                     # Buffer Messages if we find special
                     # marked msgs that should be buffered
                     # don't process these messages yet in this lifecycle
-                    if bufferable_msg and len(self._buffered_traces) < MAX_BUFFER_SIZE:
+                    #
+                    # Optimization: don't use msg.compare here, just expand
+                    # the comparison to reduce any unnecessary comparisons
+                    if (
+                            (
+                                msg_apid == buffer_matches_msg_apid and
+                                msg_ctid == buffer_matches_msg_ctid and
+                                msg_payload_decoded == buffer_matches_msg_payload_decoded
+                            ) or msg.ecuid == BUFFER_MATCHES_ECUID) and \
+                       len(self._buffered_traces) < MAX_BUFFER_SIZE:
                         self._buffered_traces.append(msg)
                         continue
 
                     # We found a start message, if this is the first ever then just start a new lifecycle,
                     # process any buffered messages and proceed. If we already have a lifecycle, then end that
                     # lifecycle and proceed as previously stated.
-                    if is_start_msg:
+                    #
+                    # Optimization: don't use msg.compare here, just expand
+                    # the comparison to reduce any unnecessary comparisons
+                    if (
+                            msg_apid == dlt_lifecycle_start_apid and
+                            msg_ctid == dlt_lifecycle_start_ctid and
+                            msg_payload_decoded == dlt_lifecycle_start_payload_decoded
+                    ):
                         if lifecycle:
                             lifecycle.set_last_msg(last_msg)
                             self.end_lifecycle(lifecycle, lifecycle.lifecycle_id)
@@ -321,8 +499,49 @@ class DLTAnalyser(object):
                     if not lifecycle:
                         lifecycle = self.setup_lifecycle(msg, lifecycle_id=lifecycle_id, process_buffer=True)
 
-                    self.process_buffer()
-                    self.process_message(msg)
+                    if self._buffered_traces:
+                        self.process_buffer()
+
+                    # Optimization:
+                    # 1. Inline the self.process_message function, it could
+                    #    reduce at 5 byte-code instructions and we could use
+                    #    local variables to reduce the access time for plugin
+                    #    lists.
+                    # 2. loop unrolling for these plugin lists. Without
+                    #    performance consideration, we could use itertool.chains
+                    #    to reduce the bolierplate code. But it is slower 3x
+                    #    than the unrolling version.
+                    # 3. Inline the exception handing rather than use a context
+                    #    manager. It reduces at least 10 byte-code instructions.
+                    # 4. Remove the recording the execution time for each plugin
+                    #    It could speed up more than 5% execution time. If you
+                    #    have need to know the execution time for each plugin,
+                    #    you could replace the try-except block with
+                    #    `handle_plugin_exceptions` to get it.
+                    # 5. Return a empty tuple when the plugin list is not found,
+                    #    a tuple is a singleton object, it avoids any unnecessary
+                    #    object constructions/destructions.
+                    for plugin in msg_plugins_getter((msg_apid, msg_ctid), ()):
+                        try:
+                            plugin(msg)
+                        except:  # pylint: disable=bare-except
+                            make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
+                    for plugin in apid_plugins_getter(msg_apid, ()):
+                        try:
+                            plugin(msg)
+                        except:  # pylint: disable=bare-except
+                            make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
+                    for plugin in ctid_plugins_getter(msg_ctid, ()):
+                        try:
+                            plugin(msg)
+                        except:  # pylint: disable=bare-except
+                            make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
+                    for plugin in greedy_plugins:
+                        try:
+                            plugin(msg)
+                        except:  # pylint: disable=bare-except
+                            make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
+
                     last_msg = msg
 
                 if lifecycle:

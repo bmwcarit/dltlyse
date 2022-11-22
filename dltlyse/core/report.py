@@ -1,61 +1,63 @@
-# Copyright (C) 2016. BMW Car IT GmbH. All rights reserved.
 """Reporting for dltlyse"""
-
 from collections import Counter
+import logging
+import xml.etree.ElementTree as etree
 
-xunit_template = (
-    '<?xml version="1.0" encoding="UTF-8"?>'
-    '<testsuite name="{testsuite_name}" tests="{number_of_tests}" errors="{number_of_errors}" '
-    'failures="{number_of_failures}" skip="{number_of_skipped}">'
-    "{testcases}"
-    "</testsuite>"
-)
+ATTACHMENT_TEMPLATE = "[[ATTACHMENT|{filename}]]"
 
-xunit_tc_template = dict(
-    error=(
-        '<testcase classname="{classname}" name="{testname}" time="0">'
-        '<error type="error" message="{message}"></error>'
-        "<system-out><![CDATA[{stdout}]]></system-out>"
-        "{attach}"
-        "</testcase>"
-    ),
-    failure=(
-        '<testcase classname="{classname}" name="{testname}" time="0">'
-        '<failure type="failure" message="{message}"></failure>'
-        "<system-out><![CDATA[{stdout}]]></system-out>"
-        "{attach}"
-        "</testcase>"
-    ),
-    skipped=(
-        '<testcase classname="{classname}" name="{testname}" time="0">'
-        '<skipped type="skip" message="{message}"></skipped>'
-        "<system-out><![CDATA[{stdout}]]></system-out>"
-        "{attach}"
-        "</testcase>"
-    ),
-    success=(
-        '<testcase classname="{classname}" name="{testname}" time="0">'
-        "<system-out><![CDATA[{stdout}]]></system-out>"
-        "{attach}"
-        "</testcase>"
-    ),
-)
+TEST_CASE_RESULT_TYPE = {
+    "success": "success",
+    "error": "error",
+    "failure": "failure",
+    "skipped": "skip",
+}
 
-attachment_template = "[[ATTACHMENT|{filename}]]"
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def xunit_render(result):
-    """Render the result into XUnit chunk"""
-    kwargs = result.__dict__
-    kwargs["attach"] = "".join([attachment_template.format(filename=x) for x in kwargs.get("attach", [])])
-    return xunit_tc_template[result.state].format(**kwargs)
+class Metadata(object):
+    """Store the metadata of result
+
+    The metadata is a dict. It can contain any type of data, but it presents with `str()` finally.
+
+    The class is internally used for `class Result`. Normally you should not use the class directly.
+    """
+
+    def __init__(self, metadata=None):
+        self.metadata = metadata or {}
+
+    def _render_xml(self, node, metadata):
+        """Real implementation for render_xml
+
+        If parses self.metadata and transforms it to a xml element. If the type of value is a dict, it parses it
+        recursively. Otherwise, it will convert the value with `str()`
+        """
+        for key, value in sorted(metadata.items(), key=lambda keyvalue: keyvalue[0]):
+            item = etree.SubElement(node, "item", name=key)
+            if isinstance(value, dict):
+                self._render_xml(item, value)
+            else:
+                item.text = str(value)
+
+    def render_xml(self):
+        """Return a xml element to present metadata
+
+        The function is a wrapper function for `Metadata._render_xml`, you can get more details from it.
+        """
+        if not self.metadata or not isinstance(self.metadata, dict):
+            return None
+
+        root = etree.Element("metadata")
+        self._render_xml(root, self.metadata)
+
+        return root
 
 
 class Result(object):
     """Class representing a single testcase result"""
 
-    def __init__(self, classname="Unknown", testname="Unknown", state="success", stdout="", stderr="", message="",
-                 attach=None):
+    def __init__(self, classname="Unknown", testname="Unknown", state="success",
+                 stdout="", stderr="", message="", metadata=None, attach=None):
         self.classname = classname
         self.testname = testname
         self.state = state
@@ -66,17 +68,52 @@ class Result(object):
             attach = []
         self.attach = attach
 
+        self.metadata = Metadata(metadata)
+
     def __repr__(self):
         return repr(self.__dict__)
 
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        self_dict = self.__dict__.copy()
+        del self_dict["metadata"]
+
+        other_dict = other.__dict__.copy()
+        del other_dict["metadata"]
+
+        return self_dict == other_dict
+
+    def render_xml(self):
+        """Return a xml element to present test result"""
+        if self.state not in TEST_CASE_RESULT_TYPE:
+            logger.warning("Not supported for the test state: %s - plugin: %s", self.state, self.classname)
+            self.state = "error"
+
+        # Prepare test case root
+        root = etree.Element("testcase", classname="dltlyse." + self.classname, name=self.testname, time="0")
+
+        # Set attachment
+        root.text = "".join(ATTACHMENT_TEMPLATE.format(filename=filename) for filename in self.attach)
+
+        # If the result is not success, output state and error message
+        if self.state != "success":
+            root.append(etree.Element(self.state, type=TEST_CASE_RESULT_TYPE[self.state], message=self.message))
+
+        # Output stdout
+        stdout = etree.SubElement(root, "system-out")
+        stdout.text = str(self.stdout)
+
+        # Add metadata
+        metadata = self.metadata.render_xml()
+        if metadata is not None:
+            root.append(metadata)
+
+        return root
 
 
 class XUnitReport(object):
     """Template class producing report in xUnit format"""
 
-    def __init__(self, outfile=False, testsuite_name="dltlyse"):
+    def __init__(self, outfile="", testsuite_name="dltlyse"):
         self.results = []
         self.outfile = outfile
         self.testsuite_name = testsuite_name
@@ -85,17 +122,49 @@ class XUnitReport(object):
         """Adds a result to the report"""
         self.results.extend(results)
 
-    def render(self):
-        """Renders an XUnit report"""
-        kwargs = {}
-        kwargs["testsuite_name"] = self.testsuite_name
+    def _generate_summary(self):
+        """Count the number of stats for test cases"""
         counts = Counter(x.state for x in self.results)
-        kwargs["testcases"] = "\n".join(xunit_render(x) for x in self.results)
-        kwargs["number_of_errors"] = counts["error"]
-        kwargs["number_of_failures"] = counts["failure"]
-        kwargs["number_of_skipped"] = counts["skipped"]
-        kwargs["number_of_tests"] = len(self.results)
-        report = xunit_template.format(**kwargs)
-        if self.outfile:
-            with open(self.outfile, "w") as reportfile:
-                reportfile.write(report)
+        return {
+            "number_of_errors": str(counts["error"]),
+            "number_of_failures": str(counts["failure"]),
+            "number_of_skipped": str(counts["skipped"]),
+            "number_of_tests": str(len(self.results)),
+        }
+
+    def render_xml(self):
+        """Return a xml element to present report"""
+        summary = self._generate_summary()
+
+        root = etree.Element(
+            "testsuite",
+            name=self.testsuite_name,
+            tests=summary["number_of_tests"],
+            errors=summary["number_of_errors"],
+            failures=summary["number_of_failures"],
+            skip=summary["number_of_skipped"],
+        )
+
+        result_elements = []
+        for result in self.results:
+            try:
+                element = result.render_xml()
+                result_elements.append(element)
+            except Exception as err:  # pylint: disable=broad-except
+                logger.error("Render result error: %s - %s", result, err)
+
+        root.extend(result_elements)
+
+        return root
+
+    def render(self):
+        """Renders a XUnit report to file"""
+        if not self.outfile:
+            return
+
+        # Generate the xml element tree
+        tree = etree.ElementTree(self.render_xml())
+
+        # Write to file
+        with open(self.outfile, "wb") as report_file:
+            tree.write(report_file, encoding="UTF-8", xml_declaration=True, method="xml")
