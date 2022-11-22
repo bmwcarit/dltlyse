@@ -4,8 +4,8 @@ from unittest import TestCase
 
 from unittest.mock import Mock, call  # pylint: disable=no-name-in-module,import-error
 
-from dltlyse.plugins.tests.helpers import MockDLTMessage
 from dltlyse.core.plugin_base import CallBacksAndReportPlugin, dlt_callback
+from tests.unittests.plugins.helpers import MockDLTMessage
 
 
 class CallBacksAndReportPluginForTesting(CallBacksAndReportPlugin):

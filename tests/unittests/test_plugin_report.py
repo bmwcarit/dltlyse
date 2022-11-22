@@ -3,7 +3,7 @@ import xml.etree.ElementTree as etree
 import inspect
 from unittest.mock import patch, mock_open
 
-from nose.tools import assert_true, assert_greater_equal, eq_
+import pytest
 
 from dltlyse.core.plugin_base import Plugin, plugin_metadata
 from dltlyse.core.report import logger, Metadata, Result, XUnitReport
@@ -102,27 +102,27 @@ def generate_test_result(attach=None, extra=""):
 
 def test_plugin_no_metadata():
     """Tests that plugin metadata is not set without plugin_metadata decorator"""
-    eq_(TestNoMetadataPlugin.__name__, "TestNoMetadataPlugin")
-    eq_(hasattr(TestNoMetadataPlugin, "plugin_metadata"), False)
-    eq_(inspect.getdoc(TestNoMetadataPlugin), "dltlyse Plugin base class")
+    assert TestNoMetadataPlugin.__name__ == "TestNoMetadataPlugin"
+    assert hasattr(TestNoMetadataPlugin, "plugin_metadata") == False
+    assert inspect.getdoc(TestNoMetadataPlugin) == "dltlyse Plugin base class"
 
 
 def test_plugin_metadata_base_class():
     """Tests that plugin metadata is set correctly."""
-    eq_(TestMetadataPlugin.__name__, "TestMetadataPlugin")
-    eq_(hasattr(TestMetadataPlugin, "plugin_metadata"), True)
-    eq_(TestMetadataPlugin.plugin_metadata, {"type": "test", "function": "monitor"})
-    eq_(inspect.getdoc(TestMetadataPlugin), "TestMetadataPlugin-first-line\n\nTestMetadataPlugin-description")
+    assert TestMetadataPlugin.__name__ == "TestMetadataPlugin"
+    assert hasattr(TestMetadataPlugin, "plugin_metadata") == True
+    assert TestMetadataPlugin.plugin_metadata == {"type": "test", "function": "monitor"}
+    assert inspect.getdoc(TestMetadataPlugin) == "TestMetadataPlugin-first-line\n\nTestMetadataPlugin-description"
 
 
 def test_plugin_metadata_derived_class():  # pylint: disable=invalid-name
     """Tests that plugin metadata is set correctly for derived class."""
-    eq_(TestMetadataLoggingPlugin.__name__, "TestMetadataLoggingPlugin")
-    eq_(hasattr(TestMetadataLoggingPlugin, "plugin_metadata"), True)
-    eq_(TestMetadataLoggingPlugin.plugin_metadata, {"type": "test", "function": "logging", "extra": "extra"})
-    eq_(
-        inspect.getdoc(TestMetadataLoggingPlugin),
-        "TestMetadataLoggingPlugin-first-line\n\nTestMetadataLoggingPlugin-description",
+    assert TestMetadataLoggingPlugin.__name__ == "TestMetadataLoggingPlugin"
+    assert hasattr(TestMetadataLoggingPlugin, "plugin_metadata") == True
+    assert TestMetadataLoggingPlugin.plugin_metadata == {"type": "test", "function": "logging", "extra": "extra"}
+    assert (
+        inspect.getdoc(TestMetadataLoggingPlugin)
+        == "TestMetadataLoggingPlugin-first-line\n\nTestMetadataLoggingPlugin-description"
     )
 
 
@@ -132,14 +132,14 @@ def test_plugin_add_result_no_metadata():  # pylint: disable=invalid-name
     plugin.add_result(state="success", message="Test successfully", stdout="test-stdout")
 
     results = plugin.get_results()
-    eq_(len(results), 1)
+    assert len(results) == 1
 
     result = results[0]
-    eq_(result.classname, "TestNoMetadataPlugin")
-    eq_(result.testname, "")
-    eq_(result.state, "success")
-    eq_(result.message, "Test successfully")
-    eq_(result.metadata.metadata, {"docstring": ""})
+    assert result.classname == "TestNoMetadataPlugin"
+    assert result.testname == ""
+    assert result.state == "success"
+    assert result.message == "Test successfully"
+    assert result.metadata.metadata == {"docstring": ""}
 
 
 def test_plugin_add_result():
@@ -148,57 +148,54 @@ def test_plugin_add_result():
     plugin.add_result(state="success", message="Test successfully", stdout="test-stdout")
 
     results = plugin.get_results()
-    eq_(len(results), 1)
+    assert len(results) == 1
 
     result = results[0]
-    eq_(result.classname, "TestPlugin")
-    eq_(result.testname, "Test-for-report")
-    eq_(result.state, "success")
-    eq_(result.message, "Test successfully")
-    eq_(
-        result.metadata.metadata,
-        {"type": "test", "function": "report", "docstring": "Test-for-report\n\nGet full description here."},
-    )
+    assert result.classname == "TestPlugin"
+    assert result.testname == "Test-for-report"
+    assert result.state == "success"
+    assert result.message == "Test successfully"
+    assert result.metadata.metadata == {
+        "type": "test",
+        "function": "report",
+        "docstring": "Test-for-report\n\nGet full description here.",
+    }
 
 
 def test_metadata_render_default():
     """Tests that metadata xml is None by default"""
     meta = Metadata()
-    eq_(meta.render_xml(), None)
+    assert meta.render_xml() == None
 
 
 def test_metadata_render_wrong_type():
     """Tests that metadata xml is None when the metadata type is not dict"""
     meta = Metadata([])
-    eq_(meta.render_xml(), None)
+    assert meta.render_xml() == None
 
 
 def test_metadata_render_normal():
     """Tests that metadata xml is rendered correctly."""
     meta = Metadata({"type": "test", "function": "monitor"})
-    assert_true(
-        equal_xml_tree(
-            meta.render_xml(), '<metadata><item name="function">monitor</item><item name="type">test</item></metadata>'
-        )
+    assert equal_xml_tree(
+        meta.render_xml(), '<metadata><item name="function">monitor</item><item name="type">test</item></metadata>'
     )
 
 
 def test_metadata_render_recursive():
     """Tests that metadata xml is rendered correctly and recursively."""
     meta = Metadata({"type": "test", "function": "monitor", "traceability": {"JIRA": "No exist"}})
-    assert_true(
-        equal_xml_tree(
-            meta.render_xml(),
-            (
-                "<metadata>"
-                '<item name="function">monitor</item>'
-                '<item name="traceability">'
-                '<item name="JIRA">No exist</item>'
-                "</item>"
-                '<item name="type">test</item>'
-                "</metadata>"
-            ),
-        )
+    assert equal_xml_tree(
+        meta.render_xml(),
+        (
+            "<metadata>"
+            '<item name="function">monitor</item>'
+            '<item name="traceability">'
+            '<item name="JIRA">No exist</item>'
+            "</item>"
+            '<item name="type">test</item>'
+            "</metadata>"
+        ),
     )
 
 
@@ -206,7 +203,7 @@ def test_result_equal():
     result = Result()
     other = Result(metadata={"key": "should-not-have-effect"})
 
-    eq_(result, other)
+    assert result == other
 
 
 def test_result_render_xml_error_state():  # pylint: disable=invalid-name
@@ -217,7 +214,7 @@ def test_result_render_xml_error_state():  # pylint: disable=invalid-name
         result.render_xml()
 
         logger_mock.assert_called_with("Not supported for the test state: %s - plugin: %s", "nostate", "noclass")
-        eq_(result.state, "error")
+        assert result.state == "error"
 
 
 def test_result_render_xml_fail():
@@ -233,23 +230,21 @@ def test_result_render_xml_fail():
         message="TestPlugin-{}-message".format(state),
     )
 
-    assert_true(
-        equal_xml_tree(
-            result.render_xml(),
-            (
-                '<testcase classname="dltlyse.TestPlugin" name="TestPlugin-shot-description" time="0">'
-                '<{state} message="TestPlugin-{state}-message" type="{state_type}"/>'
-                "<system-out>TestPlugin-stdoutput</system-out>"
-                "</testcase>"
-            ).format(state=state, state_type=state_type),
-        )
+    assert equal_xml_tree(
+        result.render_xml(),
+        (
+            '<testcase classname="dltlyse.TestPlugin" name="TestPlugin-shot-description" time="0">'
+            '<{state} message="TestPlugin-{state}-message" type="{state_type}"/>'
+            "<system-out>TestPlugin-stdoutput</system-out>"
+            "</testcase>"
+        ).format(state=state, state_type=state_type),
     )
 
 
 def test_result_render_xml_success():
     """Tests that result is rendered when the state is success."""
     result, excepted = generate_test_result()
-    assert_true(equal_xml_tree(result.render_xml(), excepted))
+    assert equal_xml_tree(result.render_xml(), excepted)
 
 
 def test_result_render_xml_with_metadata():  # pylint: disable=invalid-name
@@ -257,13 +252,13 @@ def test_result_render_xml_with_metadata():  # pylint: disable=invalid-name
     result, excepted = generate_test_result(extra="<metadata/>")
 
     with patch("dltlyse.core.report.Metadata.render_xml", return_value=etree.Element("metadata")):
-        assert_true(equal_xml_tree(result.render_xml(), excepted))
+        assert equal_xml_tree(result.render_xml(), excepted)
 
 
 def test_result_render_xml_with_attachment():  # pylint: disable=invalid-name
     """Tests that result is rendered with attachment"""
     result, excepted = generate_test_result(attach=["test.csv"])
-    assert_true(equal_xml_tree(result.render_xml(), excepted))
+    assert equal_xml_tree(result.render_xml(), excepted)
 
 
 def test_result_render_xml_with_metadata_and_attachment():  # pylint: disable=invalid-name
@@ -271,7 +266,7 @@ def test_result_render_xml_with_metadata_and_attachment():  # pylint: disable=in
     result, excepted = generate_test_result(attach=["test.csv"], extra="<metadata/>")
 
     with patch("dltlyse.core.report.Metadata.render_xml", return_value=etree.Element("metadata")):
-        assert_true(equal_xml_tree(result.render_xml(), excepted))
+        assert equal_xml_tree(result.render_xml(), excepted)
 
 
 def test_xunit_rerport_summary():
@@ -281,10 +276,12 @@ def test_xunit_rerport_summary():
         [Result(state="success"), Result(state="failure"), Result(state="skipped"), Result(state="error")]
     )
 
-    eq_(
-        xunit_report._generate_summary(),  # pylint: disable=protected-access
-        {"number_of_errors": "1", "number_of_failures": "1", "number_of_skipped": "1", "number_of_tests": "4"},
-    )
+    assert xunit_report._generate_summary() == {
+        "number_of_errors": "1",
+        "number_of_failures": "1",
+        "number_of_skipped": "1",
+        "number_of_tests": "4",
+    }
 
 
 def test_xunit_report_render_xml():
@@ -293,11 +290,9 @@ def test_xunit_report_render_xml():
     xunit_report.add_results([Result()])
 
     with patch("dltlyse.core.report.Result.render_xml", return_value=etree.Element("testcase")):
-        assert_true(
-            equal_xml_tree(
-                xunit_report.render_xml(),
-                '<testsuite errors="0" failures="0" name="dltlyse" skip="0" tests="1"><testcase/></testsuite>',
-            )
+        assert equal_xml_tree(
+            xunit_report.render_xml(),
+            '<testsuite errors="0" failures="0" name="dltlyse" skip="0" tests="1"><testcase/></testsuite>',
         )
 
 
@@ -320,7 +315,7 @@ def test_xunit_report_render():
         with patch("dltlyse.core.report.open", mock_open()) as mocked_file:
             xunit_report.render()
 
-            assert_greater_equal(mocked_file().write.call_count, 1)
+            assert mocked_file().write.call_count >= 1
 
             write_xml = "".join(args[0].decode() for args, _ in mocked_file().write.call_args_list)
-            eq_(write_xml, "<?xml version='1.0' encoding='UTF-8'?>\n<testsuite />")
+            assert write_xml == "<?xml version='1.0' encoding='UTF-8'?>\n<testsuite />"

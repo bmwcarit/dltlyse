@@ -19,15 +19,9 @@ jobs:
           build-args: |
              LIBDLT_VERSION=${{ matrix.LIBDLT_VERSION }}
           tags: python-dlt/python-dlt-unittest:${{ matrix.LIBDLT_VERSION }}
-      - name: lint check for the code base
+      - name: Run tox
         uses: addnab/docker-run-action@v3
         with:
           image: python-dlt/python-dlt-unittest:${{ matrix.LIBDLT_VERSION }}
-          options: -v ${{ github.workspace }}:/pydlt -w /pydlt
-          run: tox -e lint
-      - name: Run unit test
-        uses: addnab/docker-run-action@v3
-        with:
-          image: python-dlt/python-dlt-unittest:${{ matrix.LIBDLT_VERSION }}
-          options: -v ${{ github.workspace }}:/pydlt -w /pydlt
+          options: -v ${{ github.workspace }}:/dltlyse -w /dltlyse
           run: tox
