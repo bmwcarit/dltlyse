@@ -25,8 +25,7 @@ def parse_options(args=sys.argv[1:]):
 
     # Turn off help, so we print all options in response to -h
     conf_parser = argparse.ArgumentParser(add_help=False)
-    conf_parser.add_argument("-c", "--config", dest="config_file", metavar="FILE",
-                             help="Use specific config file")
+    conf_parser.add_argument("-c", "--config", dest="config_file", metavar="FILE", help="Use specific config file")
 
     args, remaining_args = conf_parser.parse_known_args(args)
     defaults = {"plugins": None}
@@ -50,32 +49,70 @@ def parse_options(args=sys.argv[1:]):
 
     # convert string to list
     if isinstance(defaults["plugins"], str):
-        defaults["plugins"] = defaults["plugins"].split(',')
+        defaults["plugins"] = defaults["plugins"].split(",")
     parser.set_defaults(**defaults)
 
-
-    parser.add_argument("-d", "--plugins-dir", dest="plugin_dirs", action="append", default=[],
-                        help="Add directory to search for plugins")
-    parser.add_argument("--no-default-dir", dest="no_default_dir", action="store_true", default=False,
-                        help="Do not look for plugins in the default directories")
-    parser.add_argument("-p", "--plugins", dest="plugins", action="append", default=defaults["plugins"],
-                        help="Initialize only explicitly listed plugin classes")
-    parser.add_argument("--exclude", dest="exclude", action="append",
-                        help="Exclude listed plugin classes")
-    parser.add_argument("-s", "--show-plugins", dest="show_plugins", action="store_true", default=False,
-                        help="Show available plugins")
-    parser.add_argument("-r", "--recursive", dest="recursive_search", action="store_true", default=False,
-                        help="Search directories for traces recursively")
-    parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", default=False,
-                        help="Turn on verbose messages")
-    parser.add_argument("-x", "--xunit", dest="xunit", default="dltlyse_results.xml",
-                        help="Generate result file in xUnit format to the specified file")
-    parser.add_argument("--xunit-testsuite-name", dest="xunit_testsuite_name", default="dltlyse",
-                        help="Testsuite name used inside the xunit results file")
-    parser.add_argument("--no-sort", dest="no_sort", action="store_true", default=False,
-                        help="Compatibility option - ignored")
-    parser.add_argument("--live-run", dest="live_run", action="store_true", default=False,
-                        help="Do a live run of DLTlyse plugins on incoming DLT logs")
+    parser.add_argument(
+        "-d",
+        "--plugins-dir",
+        dest="plugin_dirs",
+        action="append",
+        default=[],
+        help="Add directory to search for plugins",
+    )
+    parser.add_argument(
+        "--no-default-dir",
+        dest="no_default_dir",
+        action="store_true",
+        default=False,
+        help="Do not look for plugins in the default directories",
+    )
+    parser.add_argument(
+        "-p",
+        "--plugins",
+        dest="plugins",
+        action="append",
+        default=defaults["plugins"],
+        help="Initialize only explicitly listed plugin classes",
+    )
+    parser.add_argument("--exclude", dest="exclude", action="append", help="Exclude listed plugin classes")
+    parser.add_argument(
+        "-s", "--show-plugins", dest="show_plugins", action="store_true", default=False, help="Show available plugins"
+    )
+    parser.add_argument(
+        "-r",
+        "--recursive",
+        dest="recursive_search",
+        action="store_true",
+        default=False,
+        help="Search directories for traces recursively",
+    )
+    parser.add_argument(
+        "-v", "--verbose", dest="verbose", action="store_true", default=False, help="Turn on verbose messages"
+    )
+    parser.add_argument(
+        "-x",
+        "--xunit",
+        dest="xunit",
+        default="dltlyse_results.xml",
+        help="Generate result file in xUnit format to the specified file",
+    )
+    parser.add_argument(
+        "--xunit-testsuite-name",
+        dest="xunit_testsuite_name",
+        default="dltlyse",
+        help="Testsuite name used inside the xunit results file",
+    )
+    parser.add_argument(
+        "--no-sort", dest="no_sort", action="store_true", default=False, help="Compatibility option - ignored"
+    )
+    parser.add_argument(
+        "--live-run",
+        dest="live_run",
+        action="store_true",
+        default=False,
+        help="Do a live run of DLTlyse plugins on incoming DLT logs",
+    )
     parser.add_argument("traces", nargs="*", help="DLT trace files")
 
     return parser.parse_args(remaining_args)
@@ -95,8 +132,10 @@ def main():
 
     analyser = DLTAnalyser()
     analyser.load_plugins(
-        plugin_dirs=options.plugin_dirs, plugins=options.plugins,
-        exclude=options.exclude, no_default_dir=options.no_default_dir,
+        plugin_dirs=options.plugin_dirs,
+        plugins=options.plugins,
+        exclude=options.exclude,
+        no_default_dir=options.no_default_dir,
     )
     if options.show_plugins:
         print(analyser.show_plugins(), file=sys.stderr)
@@ -117,8 +156,13 @@ def main():
         else:
             traces.append(trace)
 
-    return analyser.run_analyse(traces, xunit=options.xunit, no_sort=True,
-                                is_live=options.live_run, testsuite_name=options.xunit_testsuite_name)
+    return analyser.run_analyse(
+        traces,
+        xunit=options.xunit,
+        no_sort=True,
+        is_live=options.live_run,
+        testsuite_name=options.xunit_testsuite_name,
+    )
 
 
 if __name__ == "__main__":

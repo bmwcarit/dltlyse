@@ -31,11 +31,7 @@ DEFAULT_PLUGINS_DIRS = [
 ]
 
 # Traces to buffer since they might be stored before lifecycle start message
-BUFFER_MATCHES_MSG = {
-    "apid": "DA1",
-    "ctid":"DC1",
-    "payload_decoded":"[connection_info ok] connected \00\00\00\00"
-}
+BUFFER_MATCHES_MSG = {"apid": "DA1", "ctid": "DC1", "payload_decoded": "[connection_info ok] connected \00\00\00\00"}
 BUFFER_MATCHES_ECUID = "XORA"
 DLT_LIFECYCLE_START = {
     "apid": "DLTD",
@@ -90,8 +86,7 @@ class DLTLifecycle(object):
                 logger.error("Set last msg of lifecycle before using lifecycle object")
                 raise ValueError()
         else:
-            logger.error("Access to messages beyond 0 and -1 unsupported"
-                         "- use DLTFile.lifecycles")
+            logger.error("Access to messages beyond 0 and -1 unsupported" "- use DLTFile.lifecycles")
             raise IndexError()
 
     def clear_msgs(self):
@@ -112,7 +107,7 @@ def make_plugin_exception_message(plugin, action, traceback_format_exc, sys_exec
     logger.error(message)
     logger.error(traceback_format_exc)
     if not isinstance(plugin, type):
-        plugin.add_exception('\n'.join([message, traceback_format_exc]))
+        plugin.add_exception("\n".join([message, traceback_format_exc]))
 
 
 @contextmanager
@@ -129,7 +124,7 @@ def handle_plugin_exceptions(plugin, action="running"):
 
 
 def _scan_folder(root, plugin_classes):
-    """ Scans a folder seeking for plugins.
+    """Scans a folder seeking for plugins.
 
     Args:
         root(str): the path to scan.
@@ -148,9 +143,9 @@ def _scan_folder(root, plugin_classes):
     for name in filenames:
         full_path = os.path.join(root, name)
         if os.path.isdir(full_path):
-            if name != 'tests':  # We skip the tests folder.
+            if name != "tests":  # We skip the tests folder.
                 _scan_folder(full_path, plugin_classes)
-        elif name.endswith('.py') and not name.startswith('_'):  # We skip non-Python files, and private files.
+        elif name.endswith(".py") and not name.startswith("_"):  # We skip non-Python files, and private files.
             module_name = os.path.splitext(os.path.split(name)[-1])[0]
             try:
                 __import__(module_name)
@@ -159,9 +154,17 @@ def _scan_folder(root, plugin_classes):
                 for class_name in dir(module):
                     cls = getattr(module, class_name)
                     if six.PY3:
-                        if (hasattr(cls, "__mro__") and issubclass(cls, Plugin) and
-                                (not any(hasattr(getattr(cls, item), "__isabstractmethod__") and
-                                         not isinstance(getattr(cls, item), property) for item in dir(cls)))):
+                        if (
+                            hasattr(cls, "__mro__")
+                            and issubclass(cls, Plugin)
+                            and (
+                                not any(
+                                    hasattr(getattr(cls, item), "__isabstractmethod__")
+                                    and not isinstance(getattr(cls, item), property)
+                                    for item in dir(cls)
+                                )
+                            )
+                        ):
                             plugin_classes.append(cls)
                     else:
                         if hasattr(cls, "__mro__") and issubclass(cls, Plugin) and not cls.__abstractmethods__:
@@ -198,15 +201,15 @@ class DltlysePluginCollector(object):
         self.msg_plugins = {}  # type: Dict[Tuple[str, str], Tuple[Plugin, ...]]
         self.apid_plugins = {}  # type: Dict[str, Tuple[Plugin, ...]]
         self.ctid_plugins = {}  #  type: Dict[str, Tuple[Plugin, ...]]
-        self.greedy_plugins = () # type: Tuple[Plugin, ...]
+        self.greedy_plugins = ()  # type: Tuple[Plugin, ...]
 
-    def _convert_dict_value_tuple(self, plugins): # type: (Dict[_T, List[Plugin]]) -> Dict[_T, Tuple[Plugin, ...]]
+    def _convert_dict_value_tuple(self, plugins):  # type: (Dict[_T, List[Plugin]]) -> Dict[_T, Tuple[Plugin, ...]]
         """Helper function to convert the list value type to tuple value type"""
         return {key: tuple(value) for key, value in plugins.items() if value}
 
     def _dispatch_plugins(self, plugins):  # type: (Iterable[Plugin]) -> None
         """Dispatch plugins by message filters"""
-        msg_plugins = defaultdict(list) # type: DefaultDict[Tuple[str, str], List[Plugin]]
+        msg_plugins = defaultdict(list)  # type: DefaultDict[Tuple[str, str], List[Plugin]]
         apid_plugins = defaultdict(list)  # type: DefaultDict[str, List[Plugin]]
         ctid_plugins = defaultdict(list)  # type: DefaultDict[str, List[Plugin]]
         greedy_plugins = []  # type: List[Plugin]
@@ -260,8 +263,8 @@ class DltlysePluginCollector(object):
             if any(apid in apid_filters or ctid in ctid_filters for apid, ctid in msg_filters if apid and ctid):
                 raise ValueError("Duplicated message filter setting: " + error_msg_postfix)
 
-    def _convert_plugin_obj_to_name(self, plugins): # (Union[Tuple[Plugin, ...], Dict[_T, Tuple[Plugin, ...]]]) ->
-                                                    #   Union[List[str], Dict[_t, List[str]]]
+    def _convert_plugin_obj_to_name(self, plugins):  # (Union[Tuple[Plugin, ...], Dict[_T, Tuple[Plugin, ...]]]) ->
+        #   Union[List[str], Dict[_t, List[str]]]
         """Helper functioon to convert the plugin object to its name from a dict or a tuple
 
         The method is only used for debugging purpose.
@@ -271,7 +274,7 @@ class DltlysePluginCollector(object):
 
         return {key: [plugin.get_plugin_name() for plugin in value] for key, value in plugins.items()}
 
-    def _print_plugin_collections(self): # type: () -> None
+    def _print_plugin_collections(self):  # type: () -> None
         """Print the collections for all plugins
 
         The method is only used for debugging purpose.
@@ -329,8 +332,11 @@ class DLTAnalyser(object):
             plugins = list(set(plugins))
         for cls in plugin_classes:
             if plugins is None:
-                if cls.manually_executed and \
-                        os.environ.get("DLTLYSE_ALL_INCLUDES_MANUAL", "false").lower() not in ('1', 'true', 'yes',):
+                if cls.manually_executed and os.environ.get("DLTLYSE_ALL_INCLUDES_MANUAL", "false").lower() not in (
+                    "1",
+                    "true",
+                    "yes",
+                ):
                     continue
             else:
                 if not cls.get_plugin_name() in plugins:
@@ -339,7 +345,7 @@ class DLTAnalyser(object):
             if exclude is not None and cls.get_plugin_name() in exclude:
                 continue
             logger.info("Loading plugin '%s' from '%s'", cls.get_plugin_name(), cls.__module__)
-            with handle_plugin_exceptions(cls, 'loading'):
+            with handle_plugin_exceptions(cls, "loading"):
                 self.plugins.append(cls())
         if plugins:
             logger.error("Some plugins that were requested were not found: %s", plugins)
@@ -365,8 +371,9 @@ class DLTAnalyser(object):
         filters = set()
         for plugin in self.plugins:
             if plugin.message_filters == "all":
-                logger.debug("Speed optimization disabled: '%s' plugin requires all messages",
-                             plugin.get_plugin_name())
+                logger.debug(
+                    "Speed optimization disabled: '%s' plugin requires all messages", plugin.get_plugin_name()
+                )
                 return None
             for flt in plugin.message_filters:
                 filters.add(flt)
@@ -395,10 +402,10 @@ class DLTAnalyser(object):
         msg_ctid = msg.ctid
 
         for plugin in itertools.chain(
-                self.plugin_collector.msg_plugins.get((msg_apid, msg_ctid), ()),
-                self.plugin_collector.apid_plugins.get(msg_apid, ()),
-                self.plugin_collector.ctid_plugins.get(msg_ctid, ()),
-                self.plugin_collector.greedy_plugins,
+            self.plugin_collector.msg_plugins.get((msg_apid, msg_ctid), ()),
+            self.plugin_collector.apid_plugins.get(msg_apid, ()),
+            self.plugin_collector.ctid_plugins.get(msg_ctid, ()),
+            self.plugin_collector.greedy_plugins,
         ):
             try:
                 plugin(msg)
@@ -469,12 +476,13 @@ class DLTAnalyser(object):
                     # Optimization: don't use msg.compare here, just expand
                     # the comparison to reduce any unnecessary comparisons
                     if (
-                            (
-                                msg_apid == buffer_matches_msg_apid and
-                                msg_ctid == buffer_matches_msg_ctid and
-                                msg_payload_decoded == buffer_matches_msg_payload_decoded
-                            ) or msg.ecuid == BUFFER_MATCHES_ECUID) and \
-                       len(self._buffered_traces) < MAX_BUFFER_SIZE:
+                        (
+                            msg_apid == buffer_matches_msg_apid
+                            and msg_ctid == buffer_matches_msg_ctid
+                            and msg_payload_decoded == buffer_matches_msg_payload_decoded
+                        )
+                        or msg.ecuid == BUFFER_MATCHES_ECUID
+                    ) and len(self._buffered_traces) < MAX_BUFFER_SIZE:
                         self._buffered_traces.append(msg)
                         continue
 
@@ -485,9 +493,9 @@ class DLTAnalyser(object):
                     # Optimization: don't use msg.compare here, just expand
                     # the comparison to reduce any unnecessary comparisons
                     if (
-                            msg_apid == dlt_lifecycle_start_apid and
-                            msg_ctid == dlt_lifecycle_start_ctid and
-                            msg_payload_decoded == dlt_lifecycle_start_payload_decoded
+                        msg_apid == dlt_lifecycle_start_apid
+                        and msg_ctid == dlt_lifecycle_start_ctid
+                        and msg_payload_decoded == dlt_lifecycle_start_payload_decoded
                     ):
                         if lifecycle:
                             lifecycle.set_last_msg(last_msg)
@@ -592,22 +600,26 @@ class DLTAnalyser(object):
             if filename in self.file_exceptions:
                 stdoutlogger.debug(self.file_exceptions[filename])
                 stdoutlogger.info("%s %s ... = failed", output, filename)
-                file_results.append(Result(
-                    classname="DLTAnalyser",
-                    testname="File Sanity Checks During Execution",
-                    state="error",
-                    stdout=self.file_exceptions[filename],
-                    message=self.file_exceptions[filename]
-                ))
+                file_results.append(
+                    Result(
+                        classname="DLTAnalyser",
+                        testname="File Sanity Checks During Execution",
+                        state="error",
+                        stdout=self.file_exceptions[filename],
+                        message=self.file_exceptions[filename],
+                    )
+                )
             else:
                 stdoutlogger.info("%s %s ... = passed", output, filename)
-                file_results.append(Result(
-                    classname="DLTAnalyser",
-                    testname="File Sanity Checks During Execution",
-                    state="success",
-                    stdout="File Parsed Successfully",
-                    message="File Parsed Successfully"
-                ))
+                file_results.append(
+                    Result(
+                        classname="DLTAnalyser",
+                        testname="File Sanity Checks During Execution",
+                        state="success",
+                        stdout="File Parsed Successfully",
+                        message="File Parsed Successfully",
+                    )
+                )
 
         xreport.add_results(file_results)
 

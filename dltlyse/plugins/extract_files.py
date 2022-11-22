@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 class File(object):
     """File data"""
+
     def __init__(self, transfer_id, filename):
         self.transfer_id = transfer_id
         self.filename = filename
@@ -78,10 +79,10 @@ class ExtractFilesPlugin(Plugin):
             #          ["FLDA", transfer_id, index, data, "FLDA"]
             #  FLFI - file transfer end
             #          ["FLFI", transfer_id, "FLFI"]
-            payload_header = message.payload[0].decode('utf8')
+            payload_header = message.payload[0].decode("utf8")
             transfer_id = str(message.payload[1])  # used as a dictionary key
             if payload_header == "FLST":
-                filename = message.payload[2].decode('utf8')
+                filename = message.payload[2].decode("utf8")
                 filename = os.path.basename(filename)  # ignore whatever path is included in DLT
                 logger.info("Found file '%s' in the trace", filename)
                 extr_file = File(transfer_id=transfer_id, filename=filename)
@@ -91,8 +92,12 @@ class ExtractFilesPlugin(Plugin):
                 extr_file.index += 1
                 if extr_file.index != message.payload[2]:
                     if not extr_file.error:
-                        logger.error("Expected index %d, got %d, failing file %s",
-                                     extr_file.index, message.payload[2], extr_file.filename)
+                        logger.error(
+                            "Expected index %d, got %d, failing file %s",
+                            extr_file.index,
+                            message.payload[2],
+                            extr_file.filename,
+                        )
                     extr_file.error = True
                 extr_file.handle.write(message.payload[3])
             elif payload_header == "FLFI":
@@ -126,7 +131,11 @@ class ExtractFilesPlugin(Plugin):
             text += "\n"
 
         if bad_files:
-            self.add_result(state="error", message="Error extracting {} files".format(len(set(bad_files))),
-                            stdout=text, attach=successful_attachments)
+            self.add_result(
+                state="error",
+                message="Error extracting {} files".format(len(set(bad_files))),
+                stdout=text,
+                attach=successful_attachments,
+            )
         else:
             self.add_result(stdout=text, attach=successful_attachments)
