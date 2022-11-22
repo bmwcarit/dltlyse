@@ -1,14 +1,9 @@
 """Test plugin_metadata decorator and xunit report functions"""
 import xml.etree.ElementTree as etree
 import inspect
+from unittest.mock import patch, mock_open
 
 from nose.tools import assert_true, assert_greater_equal, eq_
-import six
-
-if six.PY2:
-    from mock import patch, mock_open
-else:
-    from unittest.mock import patch, mock_open  # pylint: disable=no-name-in-module,import-error
 
 from dltlyse.core.plugin_base import Plugin, plugin_metadata
 from dltlyse.core.report import logger, Metadata, Result, XUnitReport
@@ -109,10 +104,7 @@ def test_plugin_no_metadata():
     """Tests that plugin metadata is not set without plugin_metadata decorator"""
     eq_(TestNoMetadataPlugin.__name__, "TestNoMetadataPlugin")
     eq_(hasattr(TestNoMetadataPlugin, "plugin_metadata"), False)
-    if six.PY2:
-        eq_(inspect.getdoc(TestNoMetadataPlugin), None)
-    else:
-        eq_(inspect.getdoc(TestNoMetadataPlugin), "dltlyse Plugin base class")
+    eq_(inspect.getdoc(TestNoMetadataPlugin), "dltlyse Plugin base class")
 
 
 def test_plugin_metadata_base_class():

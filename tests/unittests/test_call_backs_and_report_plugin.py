@@ -2,12 +2,7 @@
 import types
 from unittest import TestCase
 
-import six
-
-if six.PY2:
-    from mock import Mock, call
-else:
-    from unittest.mock import Mock, call  # pylint: disable=no-name-in-module,import-error
+from unittest.mock import Mock, call  # pylint: disable=no-name-in-module,import-error
 
 from dltlyse.plugins.tests.helpers import MockDLTMessage
 from dltlyse.core.plugin_base import CallBacksAndReportPlugin, dlt_callback
@@ -42,16 +37,10 @@ class TestCallBacksAndReportPluginBase(TestCase):
 
         for callback in callbacks:
             # Creates a method of the plugin_class, for the instance which we created.
-            if six.PY2:
-                func = types.MethodType(callback, self.plugin, self.plugin_class)
-            else:
-                func = types.MethodType(callback, self.plugin)
+            func = types.MethodType(callback, self.plugin)
 
             # Plugs such method to the instance.
-            if six.PY2:
-                setattr(self.plugin, callback.func_name, func)
-            else:
-                setattr(self.plugin, callback.__name__, func)
+            setattr(self.plugin, callback.__name__, func)
 
         # We need to re-execute it, to register the above callbacks.
         self.plugin.collect_and_register_callbacks()
@@ -187,10 +176,7 @@ class TestCallBacksAndReportPlugin(TestCallBacksAndReportPluginBase):
         filter_condition, callbacks = self.plugin.dlt_callbacks.popitem()
         self.assertEqual(filter_condition, ("SYS", "JOUR"))
         self.assertEqual(len(callbacks), 1)
-        if six.PY2:
-            self.assertEqual(callbacks[0].func_name, systemd_callback.func_name)
-        else:
-            self.assertEqual(callbacks[0].__name__, systemd_callback.__name__)
+        self.assertEqual(callbacks[0].__name__, systemd_callback.__name__)
 
     def test_add_callback_from_template_function(self):  # pylint: disable=invalid-name
         """Tests that add_callback_from_template_function adds a callback, deriving it from a template function."""
@@ -205,10 +191,7 @@ class TestCallBacksAndReportPlugin(TestCallBacksAndReportPluginBase):
         self.assertEqual(filter_condition, ("SYS", "JOUR"))
         self.assertEqual(len(callbacks), 1)
         self.assertEqual(callbacks[0].keywords, {"app_id": "SYS", "ctx_id": "JOUR", "userdata": "TEST"})
-        if six.PY2:
-            self.assertEqual(callbacks[0].func.func_name, mtee_callback.func_name)  # pylint: disable=no-member
-        else:
-            self.assertEqual(callbacks[0].func.__name__, mtee_callback.__name__)  # pylint: disable=no-member
+        self.assertEqual(callbacks[0].func.__name__, mtee_callback.__name__)  # pylint: disable=no-member
 
     def test_calling_callbacks(self):
         """Tests that all registered callbacks are correctly called when a message matches their

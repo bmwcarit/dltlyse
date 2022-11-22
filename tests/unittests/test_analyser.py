@@ -8,7 +8,6 @@ from typing import List, Tuple, Union
 from unittest import TestCase
 
 from nose.tools import assert_raises, assert_true, eq_
-import six
 
 from dlt.dlt import cDLT_FILE_NOT_OPEN_ERROR, DLT_EMPTY_FILE_ERROR, DLTMessage
 from dlt.core import API_VER as DLT_VERSION_STR
@@ -22,10 +21,7 @@ from dltlyse.core.utils import (
 )
 from dltlyse.plugins.tests.helpers import MockDLTMessage
 
-if six.PY2:
-    from mock import ANY, call, MagicMock, patch
-else:
-    from unittest.mock import ANY, call, MagicMock, patch  # pylint: disable=no-name-in-module,import-error
+from unittest.mock import ANY, call, MagicMock, patch  # pylint: disable=no-name-in-module,import-error
 
 try:
     DLT_VERSION = tuple(int(num) for num in DLT_VERSION_STR.split("."))
