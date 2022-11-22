@@ -5,10 +5,9 @@ Example:
 $ python dltlyse.py -p ExtractFilesPlugin vmwx86_full_trace.dlt
 """
 
-from __future__ import print_function
-
 import logging
 import os
+from typing import Dict
 
 from collections import OrderedDict
 from dltlyse.core.plugin_base import Plugin, EXTRACT_DIR
@@ -65,7 +64,7 @@ class ExtractFilesPlugin(Plugin):
 
     message_filters = [("SYS", "FILE"), ("FLT", "FILE")]
 
-    extracted_files = {}
+    extracted_files: Dict[str, str] = {}
     success = False
 
     counter = 0

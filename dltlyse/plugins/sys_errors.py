@@ -2,6 +2,7 @@
 
 import collections
 import re
+from typing import DefaultDict, Set
 
 from dltlyse.core.plugin_base import Plugin
 
@@ -17,7 +18,7 @@ class TestSysErrorPlugin(Plugin):
         r"(?P<librabry>\S*?): cannot open shared object file"
     )
 
-    errors = collections.defaultdict(set)
+    errors: DefaultDict[str, Set[str]] = collections.defaultdict(set)
 
     def __call__(self, message):
         """Handle traces"""

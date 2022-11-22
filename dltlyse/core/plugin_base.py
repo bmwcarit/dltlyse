@@ -7,6 +7,7 @@ import inspect
 import logging
 import os
 import re
+from typing import List, Optional, Tuple
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
@@ -73,7 +74,7 @@ class Plugin(object):
     #     mechanism is disabled
     # For special purposes when you need to analyse all messages, you can define message_filters = "all"
     # which also disables the filtering completely.
-    message_filters = []
+    message_filters: List[Optional[Tuple[str, str]]] = []
 
     manually_executed = False  # True if a plugin should be manually selected (not automatic execution).
 

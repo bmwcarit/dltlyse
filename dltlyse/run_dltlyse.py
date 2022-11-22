@@ -1,12 +1,7 @@
 #!/usr/bin/env python
 """DLT file analyser"""
 
-from __future__ import print_function
-
-try:
-    import configparser
-except ImportError:
-    import ConfigParser as configparser
+import configparser
 import argparse
 import fnmatch
 import logging

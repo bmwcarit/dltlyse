@@ -1,7 +1,5 @@
 """DLT file analyser"""
 
-from __future__ import print_function
-
 from contextlib import contextmanager
 from collections import defaultdict
 import itertools
@@ -218,7 +216,7 @@ class DltlysePluginCollector(object):
                 greedy_plugins.append(plugin)
             elif isinstance(msg_filters, list):
                 msg_filters = frozenset(msg_filters)  # type: ignore
-                for apid, ctid in msg_filters:
+                for apid, ctid in msg_filters:  # type: ignore
                     if apid and ctid:
                         msg_plugins[apid, ctid].append(plugin)
                     elif apid:
@@ -255,10 +253,12 @@ class DltlysePluginCollector(object):
                 raise ValueError("Message filter should not empty: " + error_msg_postfix)
 
             msg_filters = frozenset(plugin.message_filters)  # type: ignore
-            apid_filters = {apid for apid, ctid in msg_filters if apid and not ctid}
-            ctid_filters = {ctid for apid, ctid in msg_filters if not apid and ctid}
+            apid_filters = {apid for apid, ctid in msg_filters if apid and not ctid}  # type: ignore
+            ctid_filters = {ctid for apid, ctid in msg_filters if not apid and ctid}  # type: ignore
 
-            if any(apid in apid_filters or ctid in ctid_filters for apid, ctid in msg_filters if apid and ctid):
+            if any(  # type: ignore
+                apid in apid_filters or ctid in ctid_filters for apid, ctid in msg_filters if apid and ctid
+            ):
                 raise ValueError("Duplicated message filter setting: " + error_msg_postfix)
 
     def _convert_plugin_obj_to_name(self, plugins):  # (Union[Tuple[Plugin, ...], Dict[T, Tuple[Plugin, ...]]]) ->
