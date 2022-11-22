@@ -1,5 +1,6 @@
 [project]
 name = "dltlyse"
+dynamic = ["version"]
 description = "DLT trace file analyser for the BMW head unit platform"
 authors = [
     {name = "BMW CarIT", email="carit.info@bmw.de"},
@@ -17,12 +18,13 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 dependencies = [
-    "git+https://github.com/bmwcarit/python-dlt"
+   "dlt @ git+https://github.com/bmwcarit/python-dlt"
 ]
 
 [project.optional-dependencies]
 dev = [
     "black>=22.10",
+    "nose==1.3.7",
 ]
 
 [project.urls]
@@ -33,13 +35,11 @@ repository = "https://github.com/bmwcarit/dltlyse"
 dltlyse = "dltlyse.run_dltlyse:main"
 
 [build-system]
-requires = [
-    "setuptools >= 35.0.2",
-    "setuptools_scm >= 2.0.0, <3"
-]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
+write_to = "dltlyse/_version.py"
 
 [tool.black]
 line-length = 119
