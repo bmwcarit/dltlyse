@@ -5,7 +5,6 @@ import signal
 import threading
 import time
 from typing import List, Tuple, Union
-from unittest import TestCase
 from unittest.mock import ANY, call, MagicMock, patch
 
 import pytest

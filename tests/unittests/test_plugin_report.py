@@ -3,8 +3,6 @@ import xml.etree.ElementTree as etree
 import inspect
 from unittest.mock import patch, mock_open
 
-import pytest
-
 from dltlyse.core.plugin_base import Plugin, plugin_metadata
 from dltlyse.core.report import logger, Metadata, Result, XUnitReport
 
@@ -103,14 +101,14 @@ def generate_test_result(attach=None, extra=""):
 def test_plugin_no_metadata():
     """Tests that plugin metadata is not set without plugin_metadata decorator"""
     assert TestNoMetadataPlugin.__name__ == "TestNoMetadataPlugin"
-    assert hasattr(TestNoMetadataPlugin, "plugin_metadata") == False
+    assert not hasattr(TestNoMetadataPlugin, "plugin_metadata")
     assert inspect.getdoc(TestNoMetadataPlugin) == "dltlyse Plugin base class"
 
 
 def test_plugin_metadata_base_class():
     """Tests that plugin metadata is set correctly."""
     assert TestMetadataPlugin.__name__ == "TestMetadataPlugin"
-    assert hasattr(TestMetadataPlugin, "plugin_metadata") == True
+    assert hasattr(TestMetadataPlugin, "plugin_metadata")
     assert TestMetadataPlugin.plugin_metadata == {"type": "test", "function": "monitor"}
     assert inspect.getdoc(TestMetadataPlugin) == "TestMetadataPlugin-first-line\n\nTestMetadataPlugin-description"
 
@@ -118,7 +116,7 @@ def test_plugin_metadata_base_class():
 def test_plugin_metadata_derived_class():  # pylint: disable=invalid-name
     """Tests that plugin metadata is set correctly for derived class."""
     assert TestMetadataLoggingPlugin.__name__ == "TestMetadataLoggingPlugin"
-    assert hasattr(TestMetadataLoggingPlugin, "plugin_metadata") == True
+    assert hasattr(TestMetadataLoggingPlugin, "plugin_metadata")
     assert TestMetadataLoggingPlugin.plugin_metadata == {"type": "test", "function": "logging", "extra": "extra"}
     assert (
         inspect.getdoc(TestMetadataLoggingPlugin)
@@ -165,13 +163,13 @@ def test_plugin_add_result():
 def test_metadata_render_default():
     """Tests that metadata xml is None by default"""
     meta = Metadata()
-    assert meta.render_xml() == None
+    assert not meta.render_xml()
 
 
 def test_metadata_render_wrong_type():
     """Tests that metadata xml is None when the metadata type is not dict"""
     meta = Metadata([])
-    assert meta.render_xml() == None
+    assert not meta.render_xml()
 
 
 def test_metadata_render_normal():
