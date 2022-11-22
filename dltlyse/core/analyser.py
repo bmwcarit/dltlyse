@@ -133,7 +133,7 @@ def _scan_folder(root, plugin_classes):
         plugin_classes(list): a list which collects all plugins found.
     """
     if not os.path.isdir(root):  # Skip non-existing folders.
-        logger.warn("Directory '%s' doesn't exist!", root)
+        logger.warning("Directory '%s' doesn't exist!", root)
         return
 
     filenames = os.listdir(root)
