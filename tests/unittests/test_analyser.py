@@ -4,12 +4,13 @@ import os
 import signal
 import threading
 import time
+from typing import List, Tuple, Union
 from unittest import TestCase
 
 from nose.tools import assert_raises, assert_true, eq_
 import six
 
-from dlt.dlt import cDLT_FILE_NOT_OPEN_ERROR, DLT_EMPTY_FILE_ERROR
+from dlt.dlt import cDLT_FILE_NOT_OPEN_ERROR, DLT_EMPTY_FILE_ERROR, DLTMessage
 from dlt.core import API_VER as DLT_VERSION_STR
 from dltlyse.core.analyser import DLTAnalyser, DLTLifecycle, DltlysePluginCollector
 from dltlyse.core.utils import (
@@ -28,7 +29,7 @@ else:
 
 try:
     DLT_VERSION = tuple(int(num) for num in DLT_VERSION_STR.split("."))
-except:  # pylint: disable=bare-except
+except:  # noqa: E722
     DLT_VERSION = (2, 18, 5)
 
 

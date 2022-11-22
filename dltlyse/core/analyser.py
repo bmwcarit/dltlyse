@@ -11,6 +11,7 @@ import signal
 import sys
 import time
 import traceback
+from typing import DefaultDict, Dict, Iterable, List, Tuple, TypeVar
 
 import six
 from dlt import dlt
@@ -19,6 +20,8 @@ from dltlyse.core.report import XUnitReport, Result
 from dltlyse.core.plugin_base import Plugin
 
 # pylint: disable= too-many-nested-blocks, no-member
+
+T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
 stdoutlogger = logging.getLogger("summary")
@@ -116,7 +119,7 @@ def handle_plugin_exceptions(plugin, action="running"):
     start_time = time.time()
     try:
         yield
-    except:  # pylint: disable=bare-except
+    except:  # noqa: E722
         make_plugin_exception_message(plugin, action, traceback.format_exc(), sys.exc_info())
 
     if not isinstance(plugin, type):
@@ -200,10 +203,10 @@ class DltlysePluginCollector(object):
     def __init__(self):  # type: () -> None
         self.msg_plugins = {}  # type: Dict[Tuple[str, str], Tuple[Plugin, ...]]
         self.apid_plugins = {}  # type: Dict[str, Tuple[Plugin, ...]]
-        self.ctid_plugins = {}  #  type: Dict[str, Tuple[Plugin, ...]]
+        self.ctid_plugins = {}  # type: Dict[str, Tuple[Plugin, ...]]
         self.greedy_plugins = ()  # type: Tuple[Plugin, ...]
 
-    def _convert_dict_value_tuple(self, plugins):  # type: (Dict[_T, List[Plugin]]) -> Dict[_T, Tuple[Plugin, ...]]
+    def _convert_dict_value_tuple(self, plugins):  # type: (Dict[T, List[Plugin]]) -> Dict[T, Tuple[Plugin, ...]]
         """Helper function to convert the list value type to tuple value type"""
         return {key: tuple(value) for key, value in plugins.items() if value}
 
@@ -263,7 +266,7 @@ class DltlysePluginCollector(object):
             if any(apid in apid_filters or ctid in ctid_filters for apid, ctid in msg_filters if apid and ctid):
                 raise ValueError("Duplicated message filter setting: " + error_msg_postfix)
 
-    def _convert_plugin_obj_to_name(self, plugins):  # (Union[Tuple[Plugin, ...], Dict[_T, Tuple[Plugin, ...]]]) ->
+    def _convert_plugin_obj_to_name(self, plugins):  # (Union[Tuple[Plugin, ...], Dict[T, Tuple[Plugin, ...]]]) ->
         #   Union[List[str], Dict[_t, List[str]]]
         """Helper functioon to convert the plugin object to its name from a dict or a tuple
 
@@ -409,7 +412,7 @@ class DLTAnalyser(object):
         ):
             try:
                 plugin(msg)
-            except:  # pylint: disable=bare-except
+            except:  # noqa: E722
                 make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
 
     # pylint: disable=too-many-locals, too-many-statements
@@ -532,22 +535,22 @@ class DLTAnalyser(object):
                     for plugin in msg_plugins_getter((msg_apid, msg_ctid), ()):
                         try:
                             plugin(msg)
-                        except:  # pylint: disable=bare-except
+                        except:  # noqa: E722
                             make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
                     for plugin in apid_plugins_getter(msg_apid, ()):
                         try:
                             plugin(msg)
-                        except:  # pylint: disable=bare-except
+                        except:  # noqa: E722
                             make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
                     for plugin in ctid_plugins_getter(msg_ctid, ()):
                         try:
                             plugin(msg)
-                        except:  # pylint: disable=bare-except
+                        except:  # noqa: E722
                             make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
                     for plugin in greedy_plugins:
                         try:
                             plugin(msg)
-                        except:  # pylint: disable=bare-except
+                        except:  # noqa: E722
                             make_plugin_exception_message(plugin, "calling", traceback.format_exc(), sys.exc_info())
 
                     last_msg = msg

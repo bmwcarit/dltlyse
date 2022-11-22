@@ -5,7 +5,7 @@ description = "DLT trace file analyser for the BMW head unit platform"
 authors = [
     {name = "BMW CarIT", email="carit.info@bmw.de"},
 ]
-license = {file = "LICENSE.txt"}
+license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">=3.7"
 keywords = ["dlt"]
@@ -62,5 +62,6 @@ exclude = '''
   )/
   | foo.py           # also separately exclude a file named foo.py in
                      # the root of the project
+  | _version.py
 )
 '''
