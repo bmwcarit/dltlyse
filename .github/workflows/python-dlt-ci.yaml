@@ -19,6 +19,12 @@ jobs:
           build-args: |
              LIBDLT_VERSION=${{ matrix.LIBDLT_VERSION }}
           tags: python-dlt/python-dlt-unittest:${{ matrix.LIBDLT_VERSION }}
+      - name: Run tox static check
+        uses: addnab/docker-run-action@v3
+        with:
+          image: python-dlt/python-dlt-unittest:${{ matrix.LIBDLT_VERSION }}
+          options: -v ${{ github.workspace }}:/dltlyse -w /dltlyse
+          run: tox -e statictest
       - name: Run tox
         uses: addnab/docker-run-action@v3
         with:
