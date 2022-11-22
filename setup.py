@@ -14,15 +14,16 @@ CLASSIFIERS = [
     "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Topic :: Software Development :: Testing"
+    "Topic :: Software Development :: Testing",
 ]
 
 extra = {}
 extra["install_requires"] = open("requirements.txt").read().splitlines()
 
 try:
-    version_git = os.getenv("GITPKGVTAG", None) or subprocess.check_output(["git", "rev-parse",
-                                                                            "--short", "HEAD"]).rstrip()
+    version_git = (
+        os.getenv("GITPKGVTAG", None) or subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).rstrip()
+    )
 except (subprocess.CalledProcessError, OSError):
     version_git = "unknown"
 pkg_version = "{}+{}".format(__version__, version_git)
@@ -46,6 +47,6 @@ setup(
         "console_scripts": [
             "dltlyse = dltlyse.run_dltlyse:main",
         ]
-        },
+    },
     **extra
 )

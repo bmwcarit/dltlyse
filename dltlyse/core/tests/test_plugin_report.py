@@ -40,6 +40,7 @@ def _equal_xml_tree(root, other):  # pylint: disable=too-many-return-statements
 
 def equal_xml_tree(root, other):
     """Compare the two xml trees are equal or not"""
+
     def to_node(node):
         """Convert str/element type to element type"""
         return etree.fromstring(node) if isinstance(node, str) else node
@@ -90,7 +91,7 @@ def generate_test_result(attach=None, extra=""):
         state="success",
         stdout="TestPlugin-stdoutput",
         message="TestPlugin-success-message",
-        attach=attach
+        attach=attach,
     )
 
     xml_str = (

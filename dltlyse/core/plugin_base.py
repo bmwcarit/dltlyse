@@ -49,6 +49,7 @@ def plugin_metadata(**kwargs):
 
     The current usage is that the dltlyse xunit report will show metadata for each plugin.
     """
+
     def _metadata(cls):  # pylint: disable=missing-docstring
         metadata_key = "plugin_metadata"
         metadata = copy.deepcopy(getattr(cls, metadata_key, {}))

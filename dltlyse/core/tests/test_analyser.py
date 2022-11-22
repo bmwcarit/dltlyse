@@ -154,10 +154,10 @@ class AnalyserTests(TestCase):
         self.assertIn(DLT_EMPTY_FILE_ERROR, obj.file_exceptions[file_empty])
 
     def test_corrupt_msg_live(self):
-        """ Simulate test run of the dltlyse live with corrupt message"""
+        """Simulate test run of the dltlyse live with corrupt message"""
 
         def send_stop_signal(pid):
-            """ Send a stop signal to the live run """
+            """Send a stop signal to the live run"""
             time.sleep(0.1)
             os.kill(pid, signal.SIGINT)
 

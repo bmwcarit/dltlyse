@@ -19,7 +19,7 @@ dlt_example_stream = (
     b"Informational:\x00\x00\x02\x00\x00\xcf\x00Runtime journal (/run/log/journal/) is currently"
     b" using 8.0M.\nMaximum allowed usage is set to 385.9M.\nLeaving at least 578.8M free (of"
     b" currently available 3.7G of space).\nEnforced usage limit is thus 385.9M.\x00"
-    )
+)
 
 file_with_two_lifecycles = (
     b"DLT\x01\xc5\x82\xdaX\x82o\x0e\x00MG1S=\x00\x00NMG1S"  # first lifecycle
@@ -36,7 +36,7 @@ file_with_two_lifecycles = (
     b"DLT\x01\xed\xc2\x91Y\x17.\n\x00MG2S=\x00\x00NMG2S"  # new lifecycle
     b"\x00\x00\x02\xae\x00\x00@/A\x01DLTDINTM\x00\x02\x00\x00.\x00"
     b"Daemon launched. Starting to output traces...\x00"
-    )
+)
 
 file_with_lifecycles_without_start = (
     b"DLT\x01\xc5\x82\xdaX\x19\x93\r\x00XORA'\x01\x00\x1bXORA"  # trace to buffer
@@ -52,36 +52,36 @@ file_with_lifecycles_without_start = (
     b"DLT\x01\xed\xc2\x91Y\x17.\n\x00MG3S=\x00\x00NMG3S"  # new lifecycle
     b"\x00\x00\x02\xae\x00\x00@/A\x01DLTDINTM\x00\x02\x00\x00.\x00"
     b"Daemon launched. Starting to output traces...\x00"
-    )
+)
 
 single_random_dlt_message = bytearray(
     b"DLT\x01m\xc2\x91Y\xad\xe4\x07\x00MGHS=\x01\x00zMGHS"  # random trace
     b"\x00\x00\x02\xab\x00\x00@VA\x01DLTDINTM\x00\x02\x00\x00Z\x00"
     b"ApplicationID 'DBSY' registered for PID 689, Description=DBus"
     b" Logging|SysInfra|Log&Trace\n\x00"
-    )
+)
 
 start_dlt_message = bytearray(
     b"DLT\x01\xed\xc2\x91Y\x17.\n\x00MGHS=\x00\x00NMGHS"  # new lifecycle
     b"\x00\x00\x02\xae\x00\x00@/A\x01DLTDINTM\x00\x02\x00\x00.\x00"
     b"Daemon launched. Starting to output traces...\x00"
-    )
+)
 
 single_random_corrupt_dlt_message = bytearray(
     b"\x00\x00\x02\xab\x00\x00@VA\x01DLTDINTM\x00\x02\x00\x00Z\x00"  # random corrupt trace
     b"ApplicationID 'DBSY' registered for PID 689, Description=DBus"
     b" Logging|SysInfra|Log&Trace\n\x00"
-    )
+)
 
 single_bufferable_trace_1 = bytearray(
     b"DLT\x01\xc5\x82\xdaX\x19\x93\r\x00XORA'\x01\x00\x1bXORA"  # trace to buffer
     b"\x16\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x11\x04\x00\x00\x00\x00"
-    )
+)
 
 single_bufferable_trace_2 = bytearray(
     b"DLT\x01\xc5\x82\xdaXQi\x0e\x00MGHS5\x00\x00 MGHS"  # trace to buffer
     b"\x00\x03U\xe0&\x01DA1\x00DC1\x00\x02\x0f\x00\x00\x00\x02\x00\x00\x00\x00"
-    )
+)
 
 
 def seconds_to_human_readable(seconds):
@@ -89,7 +89,7 @@ def seconds_to_human_readable(seconds):
     secs, msecs = divmod(seconds, 1)
     mins, secs = divmod(int(seconds), 60)
     hrs, mins = divmod(mins, 60)
-    return "{:d}:{:02d}:{:02d}.{:02.0f}".format(hrs, mins, secs, msecs*100)
+    return "{:d}:{:02d}:{:02d}.{:02.0f}".format(hrs, mins, secs, msecs * 100)
 
 
 def data_to_xml_tree(data, parent=None, child_tag=None, child_attrib=None):
@@ -220,15 +220,16 @@ def data_to_xml_tree(data, parent=None, child_tag=None, child_attrib=None):
         # tags. That's because we'll remove some keys, if they are present. See below.
         attrib = attrib.copy()
 
-        new_child_tag = attrib.pop('$tag', None)
+        new_child_tag = attrib.pop("$tag", None)
         if new_child_tag is not None:
             child_tag = new_child_tag
-        new_child_attrib = attrib.pop('$attr', None)
+        new_child_attrib = attrib.pop("$attr", None)
         if new_child_attrib is not None:
             child_attrib = new_child_attrib
 
-    text, children = (None, value) if isinstance(value, (tuple, list)) \
-        else (str(value) if value is not None else None, ())
+    text, children = (
+        (None, value) if isinstance(value, (tuple, list)) else (str(value) if value is not None else None, ())
+    )
     node = Element(tag, attrib) if parent is None else SubElement(parent, tag, attrib)
     if text is not None:
         node.text = text
@@ -238,7 +239,7 @@ def data_to_xml_tree(data, parent=None, child_tag=None, child_attrib=None):
     return node
 
 
-def data_to_xml_string(data, prettify=True, indent='\t', newline='\n'):
+def data_to_xml_string(data, prettify=True, indent="\t", newline="\n"):
     """Generates an XML string representation of a Python structure according to data_to_xml_tree.
 
     Args:
@@ -256,7 +257,7 @@ def data_to_xml_string(data, prettify=True, indent='\t', newline='\n'):
 
 
 def create_temp_dlt_file(stream=None, dlt_message=None, empty=False):
-    """ Creates temporary DLT trace files for testing purposes
+    """Creates temporary DLT trace files for testing purposes
 
     Args:
         stream: A byte stream variable containing a stream in byte hex format
@@ -272,7 +273,7 @@ def create_temp_dlt_file(stream=None, dlt_message=None, empty=False):
     else:
         msg = stream
 
-    tmpfile = open(tmpname, 'wb')
+    tmpfile = open(tmpname, "wb")
     tmpfile.write(msg)
     tmpfile.flush()
     tmpfile.seek(0)
@@ -284,7 +285,7 @@ def create_temp_dlt_file(stream=None, dlt_message=None, empty=False):
 
 
 def round_float(val, precision=4):
-    """ Rounds off the floating point number to correct precision
+    """Rounds off the floating point number to correct precision
         regardless of underlying platform floating point precision
 
     Args:

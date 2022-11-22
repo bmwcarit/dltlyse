@@ -56,8 +56,17 @@ class Metadata(object):
 class Result(object):
     """Class representing a single testcase result"""
 
-    def __init__(self, classname="Unknown", testname="Unknown", state="success",
-                 stdout="", stderr="", message="", metadata=None, attach=None):
+    def __init__(
+        self,
+        classname="Unknown",
+        testname="Unknown",
+        state="success",
+        stdout="",
+        stderr="",
+        message="",
+        metadata=None,
+        attach=None,
+    ):
         self.classname = classname
         self.testname = testname
         self.state = state
