@@ -1,4 +1,3 @@
-# Copyright (C) 2016. BMW Car IT GmbH. All rights reserved.
 """Count DLTD INTM DLT messages"""
 
 from dltlyse.core.plugin_base import Plugin

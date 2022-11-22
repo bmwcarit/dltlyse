@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# Copyright (C) 2016. BMW Car IT GmbH. All rights reserved.
 """DLT file analyser"""
 
 from __future__ import print_function
