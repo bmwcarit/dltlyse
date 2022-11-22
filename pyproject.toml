@@ -1,0 +1,65 @@
+[project]
+name = "dltlyse"
+description = "DLT trace file analyser for the BMW head unit platform"
+authors = [
+    {name = "BMW CarIT", email="carit.info@bmw.de"},
+]
+license = {file = "LICENSE.txt"}
+readme = "README.md"
+requires-python = ">=3.7"
+keywords = ["dlt"]
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = [
+    "git+https://github.com/bmwcarit/python-dlt"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=22.10",
+]
+
+[project.urls]
+homepage = "https://github.com/bmwcarit/dltlyse"
+repository = "https://github.com/bmwcarit/dltlyse"
+
+[project.scripts]
+dltlyse = "dltlyse.run_dltlyse:main"
+
+[build-system]
+requires = [
+    "setuptools >= 35.0.2",
+    "setuptools_scm >= 2.0.0, <3"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+
+[tool.black]
+line-length = 119
+target_version = ['py37']
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+      \.eggs         # exclude a few common directories in the
+    | \.git          # root of the project
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | buck-out
+    | build
+    | dist
+  )/
+  | foo.py           # also separately exclude a file named foo.py in
+                     # the root of the project
+)
+'''
