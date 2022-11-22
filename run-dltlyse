@@ -1,9 +1,0 @@
-#!/usr/bin/env python
-"""DLT file analyser"""
-import sys
-
-from dltlyse.run_dltlyse import main
-
-
-if __name__ == "__main__":
-    sys.exit(main())
