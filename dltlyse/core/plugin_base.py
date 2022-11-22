@@ -10,7 +10,6 @@ import re
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
-from six import string_types
 
 from dltlyse.core.report import Result
 from dltlyse.core.utils import round_float
@@ -362,7 +361,7 @@ class CallBacksAndReportPlugin(Plugin):  # pylint: disable=abstract-method
         app_id, ctx_id, userdata = (
             str(app_id),
             str(ctx_id),
-            str(userdata) if isinstance(userdata, string_types) else userdata,
+            str(userdata) if isinstance(userdata, str) else userdata,
         )
 
         callback = functools.partial(template_function, app_id=app_id, ctx_id=ctx_id, userdata=userdata)

@@ -13,7 +13,6 @@ import time
 import traceback
 from typing import DefaultDict, Dict, Iterable, List, Tuple, TypeVar
 
-import six
 from dlt import dlt
 
 from dltlyse.core.report import XUnitReport, Result
@@ -156,22 +155,18 @@ def _scan_folder(root, plugin_classes):
                 module = sys.modules[module_name]
                 for class_name in dir(module):
                     cls = getattr(module, class_name)
-                    if six.PY3:
-                        if (
-                            hasattr(cls, "__mro__")
-                            and issubclass(cls, Plugin)
-                            and (
-                                not any(
-                                    hasattr(getattr(cls, item), "__isabstractmethod__")
-                                    and not isinstance(getattr(cls, item), property)
-                                    for item in dir(cls)
-                                )
+                    if (
+                        hasattr(cls, "__mro__")
+                        and issubclass(cls, Plugin)
+                        and (
+                            not any(
+                                hasattr(getattr(cls, item), "__isabstractmethod__")
+                                and not isinstance(getattr(cls, item), property)
+                                for item in dir(cls)
                             )
-                        ):
-                            plugin_classes.append(cls)
-                    else:
-                        if hasattr(cls, "__mro__") and issubclass(cls, Plugin) and not cls.__abstractmethods__:
-                            plugin_classes.append(cls)
+                        )
+                    ):
+                        plugin_classes.append(cls)
             except (ImportError, ValueError):
                 logger.error("Could not load plugin %s\n%s", module_name, traceback.format_exc())
 
