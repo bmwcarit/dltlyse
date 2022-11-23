@@ -1,3 +1,4 @@
+# Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
 """Tests for core analyser parts of dltlyse."""
 from contextlib import contextmanager
 import os

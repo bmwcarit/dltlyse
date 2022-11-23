@@ -1,3 +1,4 @@
+# Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
 """DLT file analyser"""
 
 from contextlib import contextmanager
