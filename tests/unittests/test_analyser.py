@@ -306,7 +306,7 @@ def test_run_analyse_call_plugin_with_exception():
 def test_run_analyse_buffer_traces():
     """Test to append traces to buffer"""
     dlt_msgs = [
-        MockDLTMessage(apid="DA1", ctid="DC1", payload="[connection_info ok] connected \00\00\00\00"),
+        MockDLTMessage(apid="DA1", ctid="DC1", payload="[connection_info ok] connected "),
         MockDLTMessage(ecuid="XORA"),
     ]
 

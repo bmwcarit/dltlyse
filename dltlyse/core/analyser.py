@@ -32,7 +32,14 @@ DEFAULT_PLUGINS_DIRS = [
 ]
 
 # Traces to buffer since they might be stored before lifecycle start message
-BUFFER_MATCHES_MSG = {"apid": "DA1", "ctid": "DC1", "payload_decoded": "[connection_info ok] connected \00\00\00\00"}
+BUFFER_MATCHES_MSG = {
+    "apid": "DA1",
+    "ctid": "DC1",
+    # Note there is a trailing space at the end of the str.  The reason is due to an
+    # optimization that compares (using `__eq__` aka `==`) the exact string that gets
+    # extracted by python-dlt now with stripped nul bytes (\00) that existed before.
+    "payload_decoded": "[connection_info ok] connected ",
+}
 BUFFER_MATCHES_ECUID = "XORA"
 DLT_LIFECYCLE_START = {
     "apid": "DLTD",
