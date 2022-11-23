@@ -13,7 +13,7 @@ RUN set -ex \
     && git checkout ${LIBDLT_VERSION} \
     && cd /dlt-daemon \
     && cmake CMakeLists.txt \
-    && make \
+    && make -j \
     && make install
 
 
@@ -23,7 +23,7 @@ RUN set -ex \
     && apk add python3 py3-pip py3-virtualenv \
     && cd /build/dltlyse \
     && pip install --no-cache-dir build wheel \
-    && python3 -m build --sdist --wheel
+    && python3 -m build --wheel
 
 
 FROM alpine:3.17
@@ -33,8 +33,11 @@ COPY --from=builder /build/dltlyse/dist/dltlyse*.whl /
 
 RUN set -ex \
     && ldconfig /usr/local/lib \
-    && apk add --no-cache python3 \
+    && apk add --no-cache python3 py3-six \
     && apk add --no-cache --virtual .build-deps py3-pip git \
-    && pip install --no-cache-dir six \
     && pip install --no-cache-dir dltlyse*.whl \
     && apk del .build-deps
+
+ENTRYPOINT [ "dltlyse" ]
+
+CMD [ "--help" ]
