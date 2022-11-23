@@ -1,5 +1,7 @@
 FROM alpine:3.17 as builder
 
+ARG LIBDLT_VERSION=v2.18.8
+
 RUN set -ex \
     && apk update \
     && apk add build-base musl-dev linux-headers git cmake ninja wget curl dbus zlib
