@@ -15,6 +15,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v3
         with:
+          file: "Dockerfile.github_flow"
           push: false
           build-args: |
              LIBDLT_VERSION=${{ matrix.LIBDLT_VERSION }}
