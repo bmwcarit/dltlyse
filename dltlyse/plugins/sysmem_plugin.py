@@ -1,3 +1,4 @@
+# Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
 """Parses DLT messages from the Monitor tool to gather system RAM usage"""
 from csv import writer
 

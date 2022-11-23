@@ -1,3 +1,4 @@
+# Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
 """Test plugin_metadata decorator and xunit report functions"""
 import xml.etree.ElementTree as etree
 import inspect

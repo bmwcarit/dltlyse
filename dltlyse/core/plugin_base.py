@@ -1,3 +1,4 @@
+# Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
 """Base class for dltlyse plugins"""
 
 import copy

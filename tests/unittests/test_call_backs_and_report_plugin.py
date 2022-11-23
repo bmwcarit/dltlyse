@@ -1,3 +1,4 @@
+# Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
 """Tests for CallBacksAndReport plugin for dltlyse."""
 import types
 from unittest import TestCase
