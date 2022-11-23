@@ -2,18 +2,38 @@
 
 A Python module and a collection of plugins to support analysis of DLT traces.
 
-# Installation
+## Run dltlyse with docker
 
-# Execution
+1. Build the docker image
 
-In SDK simply go to your result folder where your DLT files are and run:
+```bash
+git clone https://github.com/bmwcarit/dltlyse
+cd dltlyse
+docker build -t bmwcarit/dltlyse .
 ```
-dltlyse *.dlt
+
+2. Run the dltlyse container
+
+```bash
+# Get the command line help
+docker run -it --rm bmwcarit/dltlyse --help
+
+# Run with with dlt file(s)
+docker run -it --rm \
+    -v "$(pwd):/workspace" \
+    -w /workspace bmwcarit/dltlyse \
+      <path-to>.dlt <second-path-to>.dlt
+
+# To specify your own dltlyse plugins specify path to their folder:
+docker run -it --rm \
+    -v /path/to/plugins:/plugins \
+    -v "$(pwd):/workspace" \
+    -w /workspace \
+    bmwcarit/dltlyse \
+      -d /plugins <path-to>.dlt
 ```
 
-Run dltlyse with "--help" option to see more command line options
-
-# How it works
+## How it works
 
 `dltlyse` reads all messages from given DLT trace file and passes each DLT message to  __call__ of all enabled plugins.
 Plugin then decides if the message is interesting for it's purpose and collects data.
@@ -64,3 +84,4 @@ class MyCustomPlugin(Plugin):
                 stdout="Detailed log of failure",
             )
 ```
+
