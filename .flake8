@@ -1,12 +1,3 @@
-[pep8]
-max-line-length=119
-
-[nosetests]
-verbosity=2
-detailed-errors=1
-with-xunit=1
-xunit-file=junit-reports/framework_test_results.xml
-
 [flake8]
 max-line-length = 119
 ignore =
