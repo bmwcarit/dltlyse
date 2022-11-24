@@ -5,12 +5,12 @@ import os
 import signal
 import threading
 import time
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union  # noqa: F401
 from unittest.mock import ANY, call, MagicMock, patch
 
 import pytest
 
-from dlt.dlt import cDLT_FILE_NOT_OPEN_ERROR, DLT_EMPTY_FILE_ERROR, DLTMessage
+from dlt.dlt import cDLT_FILE_NOT_OPEN_ERROR, DLT_EMPTY_FILE_ERROR, DLTMessage  # noqa: F401
 from dlt.core import API_VER as DLT_VERSION_STR
 from dltlyse.core.analyser import DLTAnalyser, DLTLifecycle, DltlysePluginCollector
 from dltlyse.core.utils import (
