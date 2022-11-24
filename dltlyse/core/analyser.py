@@ -10,7 +10,7 @@ import signal
 import sys
 import time
 import traceback
-from typing import DefaultDict, Dict, Iterable, List, Tuple, TypeVar
+from typing import DefaultDict, Dict, Iterable, List, Tuple, TypeVar  # noqa: F401
 
 from dlt import dlt
 
