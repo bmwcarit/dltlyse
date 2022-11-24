@@ -20,7 +20,7 @@ from dltlyse.core.utils import (
     single_random_dlt_message,
     start_dlt_message,
 )
-from tests.unittests.plugins.helpers import MockDLTMessage
+from dltlyse.mock_dlt_message import MockDLTMessage
 
 
 try:
