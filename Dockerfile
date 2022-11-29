@@ -23,19 +23,22 @@ RUN set -ex \
     && apk add python3 py3-pip py3-virtualenv \
     && cd /build/dltlyse \
     && pip install --no-cache-dir build wheel \
+    && python3 -m build --wheel \
+    && git clone https://github.com/bmwcarit/python-dlt /build/python-dlt \
+    && cd /build/python-dlt \
     && python3 -m build --wheel
-
 
 FROM alpine:3.17
 
 COPY --from=builder /usr/local/lib /usr/local/lib
 COPY --from=builder /build/dltlyse/dist/dltlyse*.whl /
+COPY --from=builder /build/python-dlt/dist/dlt*.whl /
 
 RUN set -ex \
     && ldconfig /usr/local/lib \
     && apk add --no-cache python3 py3-six \
     && apk add --no-cache --virtual .build-deps py3-pip git \
-    && pip install --no-cache-dir dltlyse*.whl \
+    && pip install --no-cache-dir dlt*.whl dltlyse*.whl \
     && apk del .build-deps
 
 ENTRYPOINT [ "dltlyse" ]

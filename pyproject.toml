@@ -18,7 +18,6 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 dependencies = [
-   "dlt @ git+https://github.com/bmwcarit/python-dlt"
 ]
 
 [project.optional-dependencies]
@@ -40,7 +39,7 @@ requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-write_to = "dltlyse/_version.py"
+write_to = "src/dltlyse/_version.py"
 
 [tool.black]
 line-length = 119
