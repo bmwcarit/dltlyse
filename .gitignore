@@ -103,4 +103,4 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-dltlyse/_version.py
+src/dltlyse/_version.py
