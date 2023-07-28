@@ -121,7 +121,7 @@ class Plugin(object):
         plugin_docstring = inspect.getdoc(self)
 
         # Parse plugin short description
-        kwargs.setdefault("testname", plugin_docstring.splitlines()[0] if plugin_docstring else "")
+        kwargs.setdefault("testname", plugin_docstring.splitlines()[0] if plugin_docstring else type(self).__name__)
 
         # Parse plugin metadata and add plugin docstring
         metadata = copy.deepcopy(getattr(self, "plugin_metadata", {}))
