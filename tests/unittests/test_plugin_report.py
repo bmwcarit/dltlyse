@@ -135,7 +135,7 @@ def test_plugin_add_result_no_metadata():  # pylint: disable=invalid-name
 
     result = results[0]
     assert result.classname == "TestNoMetadataPlugin"
-    assert result.testname == ""
+    assert result.testname == "TestNoMetadataPlugin"
     assert result.state == "success"
     assert result.message == "Test successfully"
     assert result.metadata.metadata == {"docstring": ""}
