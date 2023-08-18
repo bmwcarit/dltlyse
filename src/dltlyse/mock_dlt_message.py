@@ -27,6 +27,10 @@ class MockDLTMessage(object):
     def __repr__(self):
         return str(self.__dict__)
 
+    @property
+    def storage_timestamp(self):
+        """Fake storage timestamp"""
+        return float("{}.{}".format(self.storageheader.seconds, self.storageheader.microseconds))
 
 class MockStorageHeader(object):
     """Mock DLT storage header for plugin testing"""
