@@ -136,6 +136,10 @@ def main():
     if options.show_plugins:
         print(analyser.show_plugins(), file=sys.stderr)
         return 0
+    
+    if os.environ.get("IOC_NON_VERBOSE_DLT_FILE") is not None:
+        if os.environ["IOC_NON_VERBOSE_DLT_FILE"] not in options.traces:
+            options.traces.append(os.environ["IOC_NON_VERBOSE_DLT_FILE"])
 
     traces = []
     for trace in options.traces:
