@@ -1,8 +1,11 @@
-# Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
+# Copyright (C) 2022-23. BMW Car IT GmbH. All rights reserved.
 """Reporting for dltlyse"""
 from collections import Counter
+import datetime as dt
 import logging
+import socket
 import xml.etree.ElementTree as etree
+
 
 ATTACHMENT_TEMPLATE = "[[ATTACHMENT|{filename}]]"
 
@@ -67,6 +70,7 @@ class Result(object):
         message="",
         metadata=None,
         attach=None,
+        timestamp=None,
     ):
         self.classname = classname
         self.testname = testname
@@ -79,6 +83,7 @@ class Result(object):
         self.attach = attach
 
         self.metadata = Metadata(metadata)
+        self.timestamp = str(dt.datetime.now(dt.timezone.utc)) if timestamp is None else str(timestamp)
 
     def __repr__(self):
         return repr(self.__dict__)
@@ -99,7 +104,9 @@ class Result(object):
             self.state = "error"
 
         # Prepare test case root
-        root = etree.Element("testcase", classname="dltlyse." + self.classname, name=self.testname, time="0")
+        root = etree.Element(
+            "testcase", classname="dltlyse." + self.classname, name=self.testname, time="0", timestamp=self.timestamp
+        )
 
         # Set attachment
         root.text = "".join(ATTACHMENT_TEMPLATE.format(filename=filename) for filename in self.attach)
@@ -123,10 +130,17 @@ class Result(object):
 class XUnitReport(object):
     """Template class producing report in xUnit format"""
 
-    def __init__(self, outfile="", testsuite_name="dltlyse"):
+    def __init__(
+        self, outfile="", testsuite_name="dltlyse", hardware=None, software=None, hostname=None, id_=None, package=None
+    ):
         self.results = []
         self.outfile = outfile
         self.testsuite_name = testsuite_name
+        self.hardware = hardware
+        self.software = software
+        self.hostname = socket.gethostname() if hostname is None else hostname
+        self.id = id_
+        self.package = package
 
     def add_results(self, results):
         """Adds a result to the report"""
@@ -145,15 +159,25 @@ class XUnitReport(object):
     def render_xml(self):
         """Return a xml element to present report"""
         summary = self._generate_summary()
+        root_attributes = {
+            "name": self.testsuite_name,
+            "tests": summary["number_of_tests"],
+            "errors": summary["number_of_errors"],
+            "failures": summary["number_of_failures"],
+            "skip": summary["number_of_skipped"],
+            "hostname": self.hostname,
+        }
+        if self.id:
+            root_attributes["id"] = str(self.id)
+        if self.package:
+            root_attributes["package"] = str(self.package)
 
-        root = etree.Element(
-            "testsuite",
-            name=self.testsuite_name,
-            tests=summary["number_of_tests"],
-            errors=summary["number_of_errors"],
-            failures=summary["number_of_failures"],
-            skip=summary["number_of_skipped"],
-        )
+        root = etree.Element("testsuite", **root_attributes)
+
+        if self.hardware and isinstance(self.hardware, dict):
+            etree.SubElement(root, "hardware", self.hardware)
+        if self.software and isinstance(self.software, dict):
+            etree.SubElement(root, "software", self.software)
 
         result_elements = []
         for result in self.results:
