@@ -1,8 +1,10 @@
-# Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
+# Copyright (C) 2022-23. BMW Car IT GmbH. All rights reserved.
 """Test plugin_metadata decorator and xunit report functions"""
-import xml.etree.ElementTree as etree
+import datetime as dt
 import inspect
+import socket
 from unittest.mock import patch, mock_open
+import xml.etree.ElementTree as etree
 
 from dltlyse.core.plugin_base import Plugin, plugin_metadata
 from dltlyse.core.report import logger, Metadata, Result, XUnitReport
@@ -79,6 +81,8 @@ def generate_test_result(attach=None, extra=""):
     """Prepare test result data and xml string"""
     attach = attach or []
 
+    timestamp = dt.datetime.now()
+
     result = Result(
         classname="TestPlugin",
         testname="TestPlugin-shot-description",
@@ -86,15 +90,16 @@ def generate_test_result(attach=None, extra=""):
         stdout="TestPlugin-stdoutput",
         message="TestPlugin-success-message",
         attach=attach,
+        timestamp=timestamp,
     )
 
     xml_str = (
-        '<testcase classname="dltlyse.TestPlugin" name="TestPlugin-shot-description" time="0">'
+        '<testcase classname="dltlyse.TestPlugin" name="TestPlugin-shot-description" time="0" timestamp="{}">'
         "{}"
         "<system-out>TestPlugin-stdoutput</system-out>"
         "{}"
         "</testcase>"
-    ).format("".join("[[ATTACHMENT|{}]]".format(filename) for filename in attach), extra)
+    ).format(timestamp, "".join("[[ATTACHMENT|{}]]".format(filename) for filename in attach), extra)
 
     return result, xml_str
 
@@ -199,14 +204,16 @@ def test_metadata_render_recursive():
 
 
 def test_result_equal():
-    result = Result()
-    other = Result(metadata={"key": "should-not-have-effect"})
+    timestamp = str(dt.datetime.now())
+    result = Result(timestamp=timestamp)
+    other = Result(metadata={"key": "should-not-have-effect"}, timestamp=timestamp)
 
     assert result == other
 
 
 def test_result_render_xml_error_state():  # pylint: disable=invalid-name
     """Test the warning message when the test state is undefined."""
+
     result = Result(classname="noclass", state="nostate")
 
     with patch.object(logger, "warning") as logger_mock:
@@ -220,6 +227,7 @@ def test_result_render_xml_fail():
     """Tests that result is rendered when the state is error."""
     state = "error"
     state_type = "error"
+    timestamp = str(dt.datetime.now())
 
     result = Result(
         classname="TestPlugin",
@@ -227,16 +235,18 @@ def test_result_render_xml_fail():
         state=state,
         stdout="TestPlugin-stdoutput",
         message="TestPlugin-{}-message".format(state),
+        timestamp=timestamp,
     )
 
     assert equal_xml_tree(
         result.render_xml(),
         (
-            '<testcase classname="dltlyse.TestPlugin" name="TestPlugin-shot-description" time="0">'
+            '<testcase classname="dltlyse.TestPlugin" name="TestPlugin-shot-description" \
+                  time="0" timestamp="{timestamp}">'
             '<{state} message="TestPlugin-{state}-message" type="{state_type}"/>'
             "<system-out>TestPlugin-stdoutput</system-out>"
             "</testcase>"
-        ).format(state=state, state_type=state_type),
+        ).format(timestamp=timestamp, state=state, state_type=state_type),
     )
 
 
@@ -291,7 +301,8 @@ def test_xunit_report_render_xml():
     with patch("dltlyse.core.report.Result.render_xml", return_value=etree.Element("testcase")):
         assert equal_xml_tree(
             xunit_report.render_xml(),
-            '<testsuite errors="0" failures="0" name="dltlyse" skip="0" tests="1"><testcase/></testsuite>',
+            f'<testsuite errors="0" failures="0" name="dltlyse" skip="0" tests="1" \
+                hostname="{socket.gethostname()}"><testcase/></testsuite>',
         )
 
 
@@ -318,3 +329,38 @@ def test_xunit_report_render():
 
             write_xml = "".join(args[0].decode() for args, _ in mocked_file().write.call_args_list)
             assert write_xml == "<?xml version='1.0' encoding='UTF-8'?>\n<testsuite />"
+
+
+def test_xunit_report_check_software_hardware():
+    """Tests that xunit report contains software and hardware sections."""
+    xunit_report = XUnitReport(
+        software={"OS": "Windows NT 3.5 Daytona"}, hardware={"CPU": "Intel 486DX2-66", "RAM": "8Mb"}
+    )
+    xunit_report.outfile = "mocked-file"
+
+    with patch("dltlyse.core.report.open", mock_open()) as mocked_file:
+        xunit_report.render()
+
+        write_xml = "".join(args[0].decode() for args, _ in mocked_file().write.call_args_list)
+        print(write_xml)
+        check_params = (
+            '<hardware CPU="Intel 486DX2-66" RAM="8Mb" />',
+            '<software OS="Windows NT 3.5 Daytona" />',
+        )
+        for param in check_params:
+            assert param in write_xml
+
+
+def test_xunit_report_check_testsuite_params():
+    """Tests that xunit report contains additional testsuite params."""
+    xunit_report = XUnitReport(package="package.gz", id_="some_strange_id", hostname="test1")
+    xunit_report.outfile = "mocked-file"
+
+    with patch("dltlyse.core.report.open", mock_open()) as mocked_file:
+        xunit_report.render()
+
+        write_xml = "".join(args[0].decode() for args, _ in mocked_file().write.call_args_list)
+
+        check_params = ('package="package.gz"', 'id="some_strange_id"', 'hostname="test1"')
+        for param in check_params:
+            assert param in write_xml

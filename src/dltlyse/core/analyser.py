@@ -1,4 +1,4 @@
-# Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
+# Copyright (C) 2022-23. BMW Car IT GmbH. All rights reserved.
 """DLT file analyser"""
 
 from contextlib import contextmanager
@@ -428,7 +428,7 @@ class DLTAnalyser(object):
         # for the method (e.g. avoid to access attribute with dots, function
         # inlining, loop unrolling, ...).  The inner most loop is called over
         # 10 million times when the input file is large. Any small/tiny change
-        # could causes performance pentlty.
+        # could causes performance penalty.
 
         filters = self.get_filters()
         # add filter for lifecycle start message in case it is missing
