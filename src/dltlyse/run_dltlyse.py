@@ -116,7 +116,7 @@ def parse_options(args=sys.argv[1:]):
 
 def main():
     """Entry point"""
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format="[%(asctime)s][%(levelname)-5.5s][%(name)s] %(message)s")
 
     options = parse_options()
 
