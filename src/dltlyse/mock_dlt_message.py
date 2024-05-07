@@ -34,3 +34,12 @@ class MockStorageHeader(object):
     def __init__(self, msec=0, sec=0):
         self.microseconds = msec
         self.seconds = sec
+
+
+class MockDLTMessageWithTime(MockDLTMessage):
+    "MockDLTMessage but with storage_timestamp"
+    
+    @property
+    def storage_timestamp(self):
+        """Fake storage timestamp"""
+        return float("{}.{}".format(self.storageheader.seconds, self.storageheader.microseconds))
