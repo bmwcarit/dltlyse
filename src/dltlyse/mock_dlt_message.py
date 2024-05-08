@@ -38,7 +38,7 @@ class MockStorageHeader(object):
 
 class MockDLTMessageWithTime(MockDLTMessage):
     "MockDLTMessage but with storage_timestamp"
-    
+
     @property
     def storage_timestamp(self):
         """Fake storage timestamp"""
