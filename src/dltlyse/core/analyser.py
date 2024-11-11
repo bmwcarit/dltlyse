@@ -383,7 +383,9 @@ class DLTAnalyser(object):
                 return None
             for flt in plugin.message_filters:
                 filters.add(flt)
-
+        if len(filters) >= 30:
+            logger.debug("Speed optimization disabled: too many filters")
+            return None
         return list(filters)
 
     def start_lifecycle(self, ecu_id, lifecycle_id):
