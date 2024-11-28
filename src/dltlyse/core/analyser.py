@@ -209,7 +209,7 @@ class DltlysePluginCollector(object):
 
     def _convert_dict_value_tuple(self, plugins):  # type: (Dict[T, List[Plugin]]) -> Dict[T, Tuple[Plugin, ...]]
         """Helper function to convert the list value type to tuple value type"""
-        return {key: tuple(value) for key, value in plugins.items() if value}
+        return {key: tuple(set(value)) for key, value in plugins.items() if value}
 
     def _dispatch_plugins(self, plugins):  # type: (Iterable[Plugin]) -> None
         """Dispatch plugins by message filters"""
