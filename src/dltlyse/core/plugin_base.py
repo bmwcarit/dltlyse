@@ -79,6 +79,9 @@ class Plugin(object):
 
     manually_executed = False  # True if a plugin should be manually selected (not automatic execution).
 
+    # By default result is not skipped, but this can be configurable
+    skip_result = False
+
     def __init__(self):
         self.__results = []
         self.__exceptions = []
@@ -127,6 +130,10 @@ class Plugin(object):
         metadata = copy.deepcopy(getattr(self, "plugin_metadata", {}))
         metadata["docstring"] = plugin_docstring or ""
         kwargs.setdefault("metadata", metadata)
+
+        # If the intention is to skip the plugin result, then enforce the result state
+        if self.skip_result:
+            kwargs["state"] = "skipped"
 
         self.__results.append(Result(**kwargs))
 

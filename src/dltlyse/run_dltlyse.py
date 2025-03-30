@@ -69,7 +69,8 @@ def parse_options(args=sys.argv[1:]):
         dest="plugins",
         action="append",
         default=defaults["plugins"],
-        help="Initialize only explicitly listed plugin classes",
+        help="Initialize only explicitly listed plugin classes. "
+        "Skip plugin report with '!' in the beginning of the plugin name within single quotes.",
     )
     parser.add_argument("--exclude", dest="exclude", action="append", help="Exclude listed plugin classes")
     parser.add_argument(

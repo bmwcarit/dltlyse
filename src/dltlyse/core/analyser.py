@@ -334,10 +334,15 @@ class DLTAnalyser(object):
         if no_default_dir is False:
             plugin_dirs += DEFAULT_PLUGINS_DIRS
         plugin_classes = get_plugin_classes(plugin_dirs)
+        plugins_dict = None
         if plugins:
-            plugins = list(set(plugins))
+            plugins_dict = {
+                plugin.split("!")[-1]: (plugin.startswith("!") and len(plugin.split("!")) > 1)
+                for plugin in list(set(plugins))
+            }
         for cls in plugin_classes:
-            if plugins is None:
+            skip_result = plugins_dict.get(cls.get_plugin_name()) or False
+            if plugins_dict is None:
                 if cls.manually_executed and os.environ.get("DLTLYSE_ALL_INCLUDES_MANUAL", "false").lower() not in (
                     "1",
                     "true",
@@ -345,17 +350,23 @@ class DLTAnalyser(object):
                 ):
                     continue
             else:
-                if not cls.get_plugin_name() in plugins:
+                if not cls.get_plugin_name() in plugins_dict:
                     continue
-                plugins.remove(cls.get_plugin_name())
+                plugins_dict.pop(cls.get_plugin_name())
             if exclude is not None and cls.get_plugin_name() in exclude:
                 continue
-            logger.info("Loading plugin '%s' from '%s'", cls.get_plugin_name(), cls.__module__)
+            logger.info(
+                "Loading plugin '%s' from '%s'%s",
+                cls.get_plugin_name(),
+                cls.__module__,
+                ", result to be skipped" if skip_result else "",
+            )
             with handle_plugin_exceptions(cls, "loading"):
+                cls.skip_result = skip_result
                 self.plugins.append(cls())
-        if plugins:
-            logger.error("Some plugins that were requested were not found: %s", plugins)
-            raise RuntimeError("Error loading requested plugins: {}".format(", ".join(plugins)))
+        if plugins_dict:
+            logger.error("Some plugins that were requested were not found: %s", plugins_dict)
+            raise RuntimeError("Error loading requested plugins: {}".format(", ".join(plugins_dict.keys())))
 
         self.plugin_collector.init_plugins(self.plugins)
 
