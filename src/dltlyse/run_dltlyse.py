@@ -8,6 +8,7 @@ import fnmatch
 import logging
 import os
 import sys
+from typing import List, Union
 
 from dltlyse.core.analyser import DLTAnalyser
 
@@ -110,9 +111,53 @@ def parse_options(args=sys.argv[1:]):
         default=False,
         help="Do a live run of DLTlyse plugins on incoming DLT logs",
     )
+    # Add an option to accept multiple arguments
+    parser.add_argument(
+        "-a",
+        "--plugin-arguments",
+        dest="plugin_arguments",
+        action="append",
+        default=[],
+        help="Arguments passed to the plugin init function. The format is arg1=val1,arg2=val2,... "
+        "The option can be used multiple times.",
+    )
     parser.add_argument("traces", nargs="*", help="DLT trace files")
 
     return parser.parse_args(remaining_args)
+
+
+def _parse_option_value(raw_value: str) -> Union[int, float, bool, str]:
+    """Parse a single option value"""
+    if raw_value.isdigit():
+        return int(raw_value)
+    try:
+        return float(raw_value)
+    except ValueError:
+        pass
+
+    if raw_value.lower() in ("true", "yes"):
+        return True
+    if raw_value.lower() in ("false", "no"):
+        return False
+
+    return raw_value
+
+
+def _parse_plugin_arguments(raw_args: List[str]) -> dict[str, Union[int, float, bool, str]]:
+    """Parse plugin arguments from the command line"""
+    new_raw_args = []
+    for arg in raw_args:
+        if "," in arg:
+            new_raw_args.extend(arg.split(","))
+        else:
+            new_raw_args.append(arg)
+
+    plugin_arguments: dict[str, Union[int, float, bool, str]] = {}
+    for arg in new_raw_args:
+        key, _, value = arg.partition("=")
+        plugin_arguments[key.strip()] = _parse_option_value(value.strip())
+
+    return plugin_arguments
 
 
 def main():
@@ -127,12 +172,15 @@ def main():
         logger.error("DLTlyse does not support multiple trace files with '--live-run' option.")
         return 1
 
+    plugin_arguments = _parse_plugin_arguments(options.plugin_arguments)
+
     analyser = DLTAnalyser()
     analyser.load_plugins(
         plugin_dirs=options.plugin_dirs,
         plugins=options.plugins,
         exclude=options.exclude,
         no_default_dir=options.no_default_dir,
+        plugin_arguments=plugin_arguments,
     )
     if options.show_plugins:
         print(analyser.show_plugins(), file=sys.stderr)

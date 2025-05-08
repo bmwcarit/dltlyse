@@ -94,7 +94,7 @@ class DLTLifecycle(object):
                 logger.error("Set last msg of lifecycle before using lifecycle object")
                 raise ValueError()
         else:
-            logger.error("Access to messages beyond 0 and -1 unsupported" "- use DLTFile.lifecycles")
+            logger.error("Access to messages beyond 0 and -1 unsupported- use DLTFile.lifecycles")
             raise IndexError()
 
     def clear_msgs(self):
@@ -329,7 +329,7 @@ class DLTAnalyser(object):
 
         self._buffered_traces = []
 
-    def load_plugins(self, plugin_dirs, plugins=None, exclude=None, no_default_dir=False):
+    def load_plugins(self, plugin_dirs, plugins=None, exclude=None, no_default_dir=False, plugin_arguments=None):
         """Load plugins from "plugins" directory"""
         if no_default_dir is False:
             plugin_dirs += DEFAULT_PLUGINS_DIRS
@@ -350,7 +350,7 @@ class DLTAnalyser(object):
                 ):
                     continue
             else:
-                if not cls.get_plugin_name() in plugins_dict:
+                if cls.get_plugin_name() not in plugins_dict:
                     continue
                 plugins_dict.pop(cls.get_plugin_name())
             if exclude is not None and cls.get_plugin_name() in exclude:
@@ -363,7 +363,16 @@ class DLTAnalyser(object):
             )
             with handle_plugin_exceptions(cls, "loading"):
                 cls.skip_result = skip_result
-                self.plugins.append(cls())
+                try:
+                    plugin = cls(plugin_arguments=plugin_arguments)
+                    logger.debug(
+                        "Initialize plugin %s with plugin arguments: %s", plugin.get_plugin_name(), plugin_arguments
+                    )
+                except TypeError:
+                    plugin = cls()
+                    logger.debug("Initialize plugin %s without plugin arguments", plugin.get_plugin_name())
+
+                self.plugins.append(plugin)
         if plugins_dict:
             logger.error("Some plugins that were requested were not found: %s", plugins_dict)
             raise RuntimeError("Error loading requested plugins: {}".format(", ".join(plugins_dict.keys())))
