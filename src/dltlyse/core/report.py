@@ -1,10 +1,12 @@
 # Copyright (C) 2022-23. BMW Car IT GmbH. All rights reserved.
 """Reporting for dltlyse"""
+
 from collections import Counter
 import datetime as dt
 import logging
 import socket
-import xml.etree.ElementTree as etree
+
+import lxml.etree as etree
 
 
 ATTACHMENT_TEMPLATE = "[[ATTACHMENT|{filename}]]"

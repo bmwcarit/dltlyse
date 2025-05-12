@@ -18,6 +18,7 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 dependencies = [
+    "lxml",
 ]
 
 [project.optional-dependencies]
