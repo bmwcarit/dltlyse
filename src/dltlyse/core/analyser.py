@@ -334,15 +334,17 @@ class DLTAnalyser(object):
         if no_default_dir is False:
             plugin_dirs += DEFAULT_PLUGINS_DIRS
         plugin_classes = get_plugin_classes(plugin_dirs)
-        plugins_dict = None
+        plugins_dict = {}
         if plugins:
             plugins_dict = {
                 plugin.split("!")[-1]: (plugin.startswith("!") and len(plugin.split("!")) > 1)
                 for plugin in list(set(plugins))
             }
+        is_filter_with_plugins_dict = bool(plugins_dict)
+
         for cls in plugin_classes:
             skip_result = plugins_dict.get(cls.get_plugin_name()) or False
-            if plugins_dict is None:
+            if not is_filter_with_plugins_dict:
                 if cls.manually_executed and os.environ.get("DLTLYSE_ALL_INCLUDES_MANUAL", "false").lower() not in (
                     "1",
                     "true",
