@@ -129,7 +129,9 @@ class Plugin(object):
         # Parse plugin metadata and add plugin docstring
         metadata = copy.deepcopy(getattr(self, "plugin_metadata", {}))
         metadata["docstring"] = plugin_docstring or ""
-        kwargs.setdefault("metadata", metadata)
+        if "metadata" in kwargs:
+            metadata.update(kwargs["metadata"])
+        kwargs["metadata"] = metadata
 
         # If the intention is to skip the plugin result, then enforce the result state
         if self.skip_result:

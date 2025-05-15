@@ -145,15 +145,8 @@ def _parse_option_value(raw_value: str) -> Union[int, float, bool, str]:
 
 def _parse_plugin_arguments(raw_args: List[str]) -> dict[str, Union[int, float, bool, str]]:
     """Parse plugin arguments from the command line"""
-    new_raw_args = []
-    for arg in raw_args:
-        if "," in arg:
-            new_raw_args.extend(arg.split(","))
-        else:
-            new_raw_args.append(arg)
-
     plugin_arguments: dict[str, Union[int, float, bool, str]] = {}
-    for arg in new_raw_args:
+    for arg in raw_args:
         key, _, value = arg.partition("=")
         plugin_arguments[key.strip()] = _parse_option_value(value.strip())
 
