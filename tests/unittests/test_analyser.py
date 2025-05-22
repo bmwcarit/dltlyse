@@ -51,7 +51,9 @@ def fake_analyser_with_run_analyse_mock(dlt_msgs, plugin=None):
         "{}.generate_reports".format(cls_name)
     ), patch(
         "{}.setup_lifecycle".format(cls_name), return_value=DLTLifecycle("MGHS", 1)
-    ) as mock_setup_lifecycle, patch("{}.end_lifecycle".format(cls_name)) as mock_end_lifecycle:
+    ) as mock_setup_lifecycle, patch(
+        "{}.end_lifecycle".format(cls_name)
+    ) as mock_end_lifecycle:
         with fake_analyser() as analyser:
             mocks = {
                 "end_lifecycle": mock_end_lifecycle,
