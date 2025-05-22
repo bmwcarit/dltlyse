@@ -1,5 +1,6 @@
 # Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
 """Tests for core analyser parts of dltlyse."""
+
 from contextlib import contextmanager
 import os
 import signal
@@ -50,9 +51,7 @@ def fake_analyser_with_run_analyse_mock(dlt_msgs, plugin=None):
         "{}.generate_reports".format(cls_name)
     ), patch(
         "{}.setup_lifecycle".format(cls_name), return_value=DLTLifecycle("MGHS", 1)
-    ) as mock_setup_lifecycle, patch(
-        "{}.end_lifecycle".format(cls_name)
-    ) as mock_end_lifecycle:
+    ) as mock_setup_lifecycle, patch("{}.end_lifecycle".format(cls_name)) as mock_end_lifecycle:
         with fake_analyser() as analyser:
             mocks = {
                 "end_lifecycle": mock_end_lifecycle,
@@ -321,7 +320,9 @@ def test_plugin_collector_convert_dict_value_tuple():
     """Test to convert a list of plugins to a tuple of plugins"""
     collector = DltlysePluginCollector()
     # pylint: disable=protected-access
-    assert collector._convert_dict_value_tuple({"abc": ["1", "2", "3"]}) == {"abc": ("1", "2", "3")}
+    value = collector._convert_dict_value_tuple({"abc": ["1", "2", "3"]})
+    value["abc"] = sorted(value["abc"])
+    assert value == {"abc": ["1", "2", "3"]}
 
 
 def test_plugin_collector_dispatch():

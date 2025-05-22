@@ -1,10 +1,12 @@
 # Copyright (C) 2022-23. BMW Car IT GmbH. All rights reserved.
 """Reporting for dltlyse"""
+
 from collections import Counter
 import datetime as dt
 import logging
 import socket
-import xml.etree.ElementTree as etree
+
+import lxml.etree as etree
 
 
 ATTACHMENT_TEMPLATE = "[[ATTACHMENT|{filename}]]"
@@ -41,7 +43,7 @@ class Metadata(object):
             if isinstance(value, dict):
                 self._render_xml(item, value)
             else:
-                item.text = str(value)
+                item.text = etree.CDATA(str(value)) if value else str(value)
 
     def render_xml(self):
         """Return a xml element to present metadata
@@ -71,6 +73,7 @@ class Result(object):
         metadata=None,
         attach=None,
         timestamp=None,
+        text="",
     ):
         self.classname = classname
         self.testname = testname
@@ -78,6 +81,7 @@ class Result(object):
         self.stdout = stdout
         self.stderr = stderr
         self.message = message
+        self.text = text
         if not attach:
             attach = []
         self.attach = attach
@@ -109,7 +113,10 @@ class Result(object):
         )
 
         # Set attachment
-        root.text = "".join(ATTACHMENT_TEMPLATE.format(filename=filename) for filename in self.attach)
+        text = self.text
+        if self.attach:
+            text += "".join(ATTACHMENT_TEMPLATE.format(filename=filename) for filename in self.attach)
+        root.text = etree.CDATA(text) if text else text
 
         # If the result is not success, output state and error message
         if self.state != "success":
@@ -117,7 +124,7 @@ class Result(object):
 
         # Output stdout
         stdout = etree.SubElement(root, "system-out")
-        stdout.text = str(self.stdout)
+        stdout.text = etree.CDATA(str(self.stdout)) if self.stdout else str(self.stdout)
 
         # Add metadata
         metadata = self.metadata.render_xml()

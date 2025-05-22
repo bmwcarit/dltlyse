@@ -1,10 +1,13 @@
 # Copyright (C) 2022-23. BMW Car IT GmbH. All rights reserved.
 """Test plugin_metadata decorator and xunit report functions"""
+
 import datetime as dt
 import inspect
 import socket
 from unittest.mock import patch, mock_open
-import xml.etree.ElementTree as etree
+# import xml.etree.ElementTree as etree
+
+import lxml.etree as etree
 
 from dltlyse.core.plugin_base import Plugin, plugin_metadata
 from dltlyse.core.report import logger, Metadata, Result, XUnitReport
@@ -328,7 +331,7 @@ def test_xunit_report_render():
             assert mocked_file().write.call_count >= 1
 
             write_xml = "".join(args[0].decode() for args, _ in mocked_file().write.call_args_list)
-            assert write_xml == "<?xml version='1.0' encoding='UTF-8'?>\n<testsuite />"
+            assert write_xml == "<?xml version='1.0' encoding='UTF-8'?>\n<testsuite/>"
 
 
 def test_xunit_report_check_software_hardware():
@@ -344,8 +347,8 @@ def test_xunit_report_check_software_hardware():
         write_xml = "".join(args[0].decode() for args, _ in mocked_file().write.call_args_list)
 
         check_params = (
-            '<hardware CPU="Intel 486DX2-66" RAM="8Mb" />',
-            '<software OS="Windows NT 3.5 Daytona" />',
+            '<hardware CPU="Intel 486DX2-66" RAM="8Mb"/>',
+            '<software OS="Windows NT 3.5 Daytona"/>',
         )
         for param in check_params:
             assert param in write_xml
