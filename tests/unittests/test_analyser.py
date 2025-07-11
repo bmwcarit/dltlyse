@@ -1,5 +1,6 @@
 # Copyright (C) 2022. BMW Car IT GmbH. All rights reserved.
 """Tests for core analyser parts of dltlyse."""
+
 from contextlib import contextmanager
 import os
 import signal
@@ -321,7 +322,9 @@ def test_plugin_collector_convert_dict_value_tuple():
     """Test to convert a list of plugins to a tuple of plugins"""
     collector = DltlysePluginCollector()
     # pylint: disable=protected-access
-    assert collector._convert_dict_value_tuple({"abc": ["1", "2", "3"]}) == {"abc": ("1", "2", "3")}
+    value = collector._convert_dict_value_tuple({"abc": ["1", "2", "3"]})
+    value["abc"] = sorted(value["abc"])
+    assert value == {"abc": ["1", "2", "3"]}
 
 
 def test_plugin_collector_dispatch():

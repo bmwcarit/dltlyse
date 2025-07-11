@@ -94,7 +94,7 @@ class DLTLifecycle(object):
                 logger.error("Set last msg of lifecycle before using lifecycle object")
                 raise ValueError()
         else:
-            logger.error("Access to messages beyond 0 and -1 unsupported" "- use DLTFile.lifecycles")
+            logger.error("Access to messages beyond 0 and -1 unsupported- use DLTFile.lifecycles")
             raise IndexError()
 
     def clear_msgs(self):
@@ -209,7 +209,7 @@ class DltlysePluginCollector(object):
 
     def _convert_dict_value_tuple(self, plugins):  # type: (Dict[T, List[Plugin]]) -> Dict[T, Tuple[Plugin, ...]]
         """Helper function to convert the list value type to tuple value type"""
-        return {key: tuple(value) for key, value in plugins.items() if value}
+        return {key: tuple(set(value)) for key, value in plugins.items() if value}
 
     def _dispatch_plugins(self, plugins):  # type: (Iterable[Plugin]) -> None
         """Dispatch plugins by message filters"""
@@ -329,15 +329,22 @@ class DLTAnalyser(object):
 
         self._buffered_traces = []
 
-    def load_plugins(self, plugin_dirs, plugins=None, exclude=None, no_default_dir=False):
+    def load_plugins(self, plugin_dirs, plugins=None, exclude=None, no_default_dir=False, plugin_arguments=None):
         """Load plugins from "plugins" directory"""
         if no_default_dir is False:
             plugin_dirs += DEFAULT_PLUGINS_DIRS
         plugin_classes = get_plugin_classes(plugin_dirs)
+        plugins_dict = {}
         if plugins:
-            plugins = list(set(plugins))
+            plugins_dict = {
+                plugin.split("!")[-1]: (plugin.startswith("!") and len(plugin.split("!")) > 1)
+                for plugin in list(set(plugins))
+            }
+        is_filter_with_plugins_dict = bool(plugins_dict)
+
         for cls in plugin_classes:
-            if plugins is None:
+            skip_result = plugins_dict.get(cls.get_plugin_name()) or False
+            if not is_filter_with_plugins_dict:
                 if cls.manually_executed and os.environ.get("DLTLYSE_ALL_INCLUDES_MANUAL", "false").lower() not in (
                     "1",
                     "true",
@@ -345,17 +352,32 @@ class DLTAnalyser(object):
                 ):
                     continue
             else:
-                if not cls.get_plugin_name() in plugins:
+                if cls.get_plugin_name() not in plugins_dict:
                     continue
-                plugins.remove(cls.get_plugin_name())
+                plugins_dict.pop(cls.get_plugin_name())
             if exclude is not None and cls.get_plugin_name() in exclude:
                 continue
-            logger.info("Loading plugin '%s' from '%s'", cls.get_plugin_name(), cls.__module__)
+            logger.info(
+                "Loading plugin '%s' from '%s'%s",
+                cls.get_plugin_name(),
+                cls.__module__,
+                ", result to be skipped" if skip_result else "",
+            )
             with handle_plugin_exceptions(cls, "loading"):
-                self.plugins.append(cls())
-        if plugins:
-            logger.error("Some plugins that were requested were not found: %s", plugins)
-            raise RuntimeError("Error loading requested plugins: {}".format(", ".join(plugins)))
+                cls.skip_result = skip_result
+                try:
+                    plugin = cls(plugin_arguments=plugin_arguments)
+                    logger.debug(
+                        "Initialize plugin %s with plugin arguments: %s", plugin.get_plugin_name(), plugin_arguments
+                    )
+                except TypeError:
+                    plugin = cls()
+                    logger.debug("Initialize plugin %s without plugin arguments", plugin.get_plugin_name())
+
+                self.plugins.append(plugin)
+        if plugins_dict:
+            logger.error("Some plugins that were requested were not found: %s", plugins_dict)
+            raise RuntimeError("Error loading requested plugins: {}".format(", ".join(plugins_dict.keys())))
 
         self.plugin_collector.init_plugins(self.plugins)
 
@@ -383,7 +405,9 @@ class DLTAnalyser(object):
                 return None
             for flt in plugin.message_filters:
                 filters.add(flt)
-
+        if len(filters) >= 30:
+            logger.debug("Speed optimization disabled: too many filters")
+            return None
         return list(filters)
 
     def start_lifecycle(self, ecu_id, lifecycle_id):
