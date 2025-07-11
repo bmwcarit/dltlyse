@@ -1,7 +1,6 @@
 # Copyright (C) 2022-23. BMW Car IT GmbH. All rights reserved.
 """Test plugin_metadata decorator and xunit report functions"""
-
-import datetime as dt
+import xml.etree.ElementTree as etree
 import inspect
 import socket
 from unittest.mock import patch, mock_open
